@@ -1,14 +1,14 @@
-
+import '.././models/transaction_type.dart';
 
 String formatDate(DateTime date) {
   return '${date.day}/${date.month}/${date.year}';
 }
-
-enum TransactionType {
-  expense,
-  income,
-  debt,
-}
+//..... enum transaction type added on model\transaction_type.dart
+// enum TransactionType {
+//   expense,
+//   income,
+//   debt,
+// }
 
 String transactionTypeLabel(TransactionType type) {
   switch (type) {
@@ -21,7 +21,7 @@ String transactionTypeLabel(TransactionType type) {
   }
 }
 //________generateUniqueSource________
-String generateUniqueSource(String source,List<String> existingSources){
+String generateUniqueSource(String source, List<String> existingSources) {
   if (!existingSources.contains(source)) return source;
 
   int i = 1;

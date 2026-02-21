@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/transaction_model.dart';
 import '../../utils/helpers.dart';
+import '../../models/transaction_type.dart';
 
 class TransactionPreview extends StatelessWidget {
   final TransactionData tx;

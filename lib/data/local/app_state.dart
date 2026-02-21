@@ -1,6 +1,7 @@
 import 'package:hive/hive.dart';
 import '../../models/transaction_model.dart';
-import '../../utils/helpers.dart';
+//import '../../utils/helpers.dart';
+import '../.././models/transaction_type.dart';
 
 class AppState {
   static late Box<TransactionData> _txBox;
