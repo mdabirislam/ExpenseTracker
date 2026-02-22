@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import '../../../utils/helpers.dart';
 import '../../../models/transaction_type.dart';
-// import '../../../data/local/app_state.dart';
+import '../../../data/local/app_state.dart';
 import '../../../models/transaction_model.dart';
 
 class AddTransactionScreen extends StatefulWidget {
@@ -85,18 +85,19 @@ Future<void> _onSave() async {
     
   );
 
-  /// Save to Hive
-  // await AppState.addTransaction(tx);
-  await box.add(tx); // 🔥 DIRECT Hive add
+  /// Save to Hive via AppState
+  await AppState.addTransaction(tx);
+  // await box.add(tx); // 🔥 DIRECT Hive add
 
   /// ✅ Clear only inputs (NOT type)
   _amountController.clear();
   _sourceController.clear();
   _noteController.clear();
 
-  setState(() {
-    _selectedType = TransactionType.expense; // default
-  });
+//.....reset transaction type after save........
+  // setState(() {
+  //   _selectedType = TransactionType.expense; // default
+  // });
 
   ///  success feedback
   ScaffoldMessenger.of(context).showSnackBar(
