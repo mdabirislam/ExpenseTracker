@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import '../widgets/app_bar_widget.dart';
 import '../widgets/balance_summary.dart';
@@ -6,9 +7,10 @@ import '../widgets/info_board.dart';
 import '../widgets/transaction_preview.dart';
 import '../widgets/fab_menu.dart';
 import '../widgets/charts/monthly_bar_chart.dart';
-import '../../data/local/app_state.dart';
+import '../../models/transaction_model.dart';
 import '../placeholders/ui_vars.dart';
 import './after_click_screen/add_transaction_screen.dart';
+import '../../data/local/app_state.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -17,10 +19,7 @@ class HomeScreen extends StatelessWidget {
   void onAddTransaction(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) =>
-            const AddTransactionScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const AddTransactionScreen()),
     );
   }
 
@@ -31,48 +30,52 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      // ───── AppBar ─────
-      appBar: AppBarWidget(
-        title: 'Home',
-        onLanguageTap: () {},
-        onThemeTap: () {},
-      ),
+    final box = Hive.box<TransactionData>('transactions');
 
-      // ───── FAB ─────
-      floatingActionButton: FabMenu(
-        onAddTransaction: () => onAddTransaction(context),
-        onStartNewMonth: _onStartNewMonth,
-      ),
+    return ValueListenableBuilder(
+      valueListenable: box.listenable(),
+      builder: (context, Box<TransactionData> box, _) {
+        // 🔹 recalc totals whenever transactions change
+        AppState.recalculateFromBox(box);
 
-      // ───── Body ─────
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildBalanceSummary(),
-            const SizedBox(height: 16),
-            _infoBoards(),
-            const SizedBox(height: 20),
-            _shortHistory(),
-            const SizedBox(height: 20),
-            const MonthlyBarChart(),
-          ],
-        ),
-      ),
+        final transactions = box.values.toList().reversed.toList();
+
+        return Scaffold(
+          appBar: AppBarWidget(
+            title: 'Home',
+            onLanguageTap: () {},
+            onThemeTap: () {},
+          ),
+          floatingActionButton: FabMenu(
+            onAddTransaction: () => onAddTransaction(context),
+            onStartNewMonth: _onStartNewMonth,
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildBalanceSummary(),
+                const SizedBox(height: 16),
+                _infoBoards(),
+                const SizedBox(height: 20),
+                _shortHistory(transactions),
+                const SizedBox(height: 20),
+                const MonthlyBarChart(),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
   // ───────── Balance Summary ─────────
   Widget _buildBalanceSummary() {
     return BalanceSummary(
-      balance:  '৳ ${AppState.balance.toStringAsFixed(2)}',
-       statusText: AppState.balance >= 0
-          ? 'You are under budget'
-          : 'Over budget',
-      statusColor:
-          AppState.balance >= 0 ? Colors.green : Colors.red,
+      balance: '৳ ${AppState.balance.toStringAsFixed(2)}',
+      statusText: AppState.balance >= 0 ? 'You are under budget' : 'Over budget',
+      statusColor: AppState.balance >= 0 ? Colors.green : Colors.red,
     );
   }
 
@@ -86,10 +89,7 @@ class HomeScreen extends StatelessWidget {
       mainAxisSpacing: 12,
       childAspectRatio: 1.6,
       children: [
-        InfoBoard(
-          title: boardExpenseTitle,
-          value: '৳ ${AppState.totalExpense}',
-        ),
+        InfoBoard(title: boardExpenseTitle, value: '৳ ${AppState.totalExpense}'),
         InfoBoard(title: boardDebtTitle, value: '৳ ${AppState.totalDebt}'),
         InfoBoard(title: boardDebtToPayTitle, value: '৳ ${AppState.debtToPay}'),
         InfoBoard(title: boardSavingsTitle, value: '৳ ${AppState.savings}'),
@@ -98,7 +98,7 @@ class HomeScreen extends StatelessWidget {
   }
 
   // ───────── Short History ─────────
-  Widget _shortHistory() {
+  Widget _shortHistory(List<TransactionData> transactions) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -113,9 +113,7 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        ...AppState.transactions
-            .take(3)
-            .map((tx) => TransactionPreview(tx: tx)),
+        ...transactions.take(3).map((tx) => TransactionPreview(tx: tx)),
       ],
     );
   }
