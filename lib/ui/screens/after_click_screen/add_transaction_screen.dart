@@ -4,6 +4,7 @@ import '../../../utils/helpers.dart';
 import '../../../models/transaction_type.dart';
 import '../../../data/local/app_state.dart';
 import '../../../models/transaction_model.dart';
+import 'package:uuid/uuid.dart'; // for unique id
 
 class AddTransactionScreen extends StatefulWidget {
   const AddTransactionScreen({super.key});
@@ -13,97 +14,124 @@ class AddTransactionScreen extends StatefulWidget {
 }
 
 class _AddTransactionScreenState extends State<AddTransactionScreen> {
-  // ───────── Controllers ─────────
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _sourceController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
 
   TransactionType _selectedType = TransactionType.expense;
 
-// ───────── Save Logic ─────────
-Future<void> _onSave() async {
-  final amountText = _amountController.text.trim();
-  final sourceInput = _sourceController.text.trim();
-  final note = _noteController.text.trim();
+  final uuid = const Uuid();
 
-  if (amountText.isEmpty || sourceInput.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Amount and Source are required')),
-    );
-    return;
-  }
-
-  final amount = double.tryParse(amountText);
-  if (amount == null || amount <= 0) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Invalid amount')),
-    );
-    return;
-  }
-
-  /// Hive box
-  final box = Hive.box<TransactionData>('transactions');
-
-  /// Existing sources
-  final existingSources = box.values.map((tx) => tx.source).toList();
-
-  String finalSource = sourceInput;
-  // ─── Duplicate source handling ───
-  if (existingSources.contains(sourceInput)) {
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Source already exists'),
-        content: const Text(
-          'This source already exists. Do you want to merge or create a new one?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, 'merge'),
-            child: const Text('Merge'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, 'new'),
-            child: const Text('Create New'),
-          ),
-        ],
-      ),
-    );
-
-    if (result == 'new') {
-      finalSource = generateUniqueSource(sourceInput, existingSources);
+  // ───────── Source Label ─────────
+  String getSourceLabel(TransactionType type) {
+    switch (type) {
+      case TransactionType.expense:
+        return 'Expense Source / Reason';
+      case TransactionType.income:
+        return 'Income Source';
+      case TransactionType.debtBorrow:
+      case TransactionType.debtRepay:
+        return 'Debt From / To';
+      case TransactionType.creditBuy:
+      case TransactionType.creditPay:
+        return 'Credit From / To';
+      case TransactionType.savingsAdd:
+      case TransactionType.savingsWithdraw:
+        return 'Savings Source / Note';
+      case TransactionType.lendGive:
+      case TransactionType.lendReceive:
+        return 'Lend / Receive';
+      default:
+        return 'Source';
     }
   }
 
-  /// Create transaction
-  final tx = TransactionData(
-    type: _selectedType, 
-    amount: amount,
-    source: finalSource,
-    note: note.isEmpty ? null : note,
-    date: DateTime.now(),
-    
-  );
+  Future<void> _onSave() async {
+    final amountText = _amountController.text.trim();
+    final sourceInput = _sourceController.text.trim();
+    final note = _noteController.text.trim();
 
-  /// Save to Hive via AppState
-  await AppState.addTransaction(tx);
-  // await box.add(tx); // 🔥 DIRECT Hive add
+    if (amountText.isEmpty || sourceInput.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Amount and Source are required')),
+      );
+      return;
+    }
 
-  /// ✅ Clear only inputs (NOT type)
-  _amountController.clear();
-  _sourceController.clear();
-  _noteController.clear();
+    final amount = double.tryParse(amountText);
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid amount')),
+      );
+      return;
+    }
 
-//.....reset transaction type after save........
-  // setState(() {
-  //   _selectedType = TransactionType.expense; // default
-  // });
+    final box = Hive.box<TransactionData>('transactions');
 
-  ///  success feedback
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('Transaction saved')),
-  );
-}
+    // Existing sources only for this type
+    final existingSources = box.values
+        .where((tx) => tx.type == _selectedType)
+        .map((tx) => tx.source)
+        .toList();
+
+    String finalSource = sourceInput;
+
+    if (existingSources.contains(sourceInput)) {
+      final result = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Source already exists'),
+          content: const Text(
+            'This source already exists. Do you want to merge or create a new one?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'merge'),
+              child: const Text('Merge'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'new'),
+              child: const Text('Create New'),
+            ),
+          ],
+        ),
+      );
+
+      if (result == 'new') {
+        finalSource = generateUniqueSource(sourceInput, existingSources);
+      }
+    }
+
+    // Generate monthKey
+    final monthKey = generateMonthKey(DateTime.now());
+
+    // Create transaction with required `id`
+    final tx = TransactionData(
+      id: uuid.v4(),
+      type: _selectedType,
+      amount: amount,
+      category: 'Others',
+      source: finalSource,
+      note: note.isEmpty ? null : note,
+      date: DateTime.now(),
+      monthKey: monthKey,
+      priorityLevel: null,
+      isArchived: false,
+      isCleared: false,
+      isPlanned: false,
+    );
+
+    await AppState.addTransaction(tx);
+
+    // Clear inputs
+    _amountController.clear();
+    _sourceController.clear();
+    _noteController.clear();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Transaction saved')),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -116,24 +144,18 @@ Future<void> _onSave() async {
           children: [
             _transactionTypeSelector(),
             const SizedBox(height: 16),
-
             _sourceField(),
             const SizedBox(height: 16),
-
             _amountField(),
             const SizedBox(height: 16),
-
             _noteField(),
             const SizedBox(height: 24),
-
             _saveButton(),
           ],
         ),
       ),
     );
   }
-
-  // ───────── Widgets ─────────
 
   Widget _transactionTypeSelector() {
     return Row(
@@ -159,11 +181,7 @@ Future<void> _onSave() async {
     return TextField(
       controller: _sourceController,
       decoration: InputDecoration(
-        labelText: _selectedType == TransactionType.expense
-            ? 'Expense Source / Reason'
-            : _selectedType == TransactionType.income
-            ? 'Income Source'
-            : 'Debt From / To',
+        labelText: getSourceLabel(_selectedType),
         border: const OutlineInputBorder(),
       ),
     );

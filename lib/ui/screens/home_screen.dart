@@ -30,13 +30,13 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final box = Hive.box<TransactionData>('transactions');
+    final _txBox = Hive.box<TransactionData>('transactions'); // use _txBox
 
     return ValueListenableBuilder(
-      valueListenable: box.listenable(),
+      valueListenable: _txBox.listenable(),
       builder: (context, Box<TransactionData> box, _) {
-        // 🔹 recalc totals whenever transactions change
-        AppState.recalculateFromBox(box);
+        // 🔹 Recalculate totals whenever transactions change
+        AppState.recalculateFromBox();
 
         final transactions = box.values.toList().reversed.toList();
 
@@ -89,10 +89,10 @@ class HomeScreen extends StatelessWidget {
       mainAxisSpacing: 12,
       childAspectRatio: 1.6,
       children: [
-        InfoBoard(title: boardExpenseTitle, value: '৳ ${AppState.totalExpense}'),
-        InfoBoard(title: boardDebtTitle, value: '৳ ${AppState.totalDebt}'),
-        InfoBoard(title: boardDebtToPayTitle, value: '৳ ${AppState.debtToPay}'),
-        InfoBoard(title: boardSavingsTitle, value: '৳ ${AppState.savings}'),
+        InfoBoard(title: boardExpenseTitle, value: '৳ ${AppState.totalExpense.toStringAsFixed(2)}'),
+        InfoBoard(title: boardDebtTitle, value: '৳ ${AppState.totalDebt.toStringAsFixed(2)}'),
+        // debtToPay removed as per new design
+        InfoBoard(title: boardSavingsTitle, value: '৳ ${AppState.savings.toStringAsFixed(2)}'),
       ],
     );
   }
@@ -113,7 +113,7 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        ...transactions.take(3).map((tx) => TransactionPreview(tx: tx)),
+        ...transactions.take(3).map((tx) => TransactionPreview(tx: tx)).toList(),
       ],
     );
   }
