@@ -106,23 +106,61 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   // ───────── Widgets ─────────
   Widget _transactionTypeSelector() {
-    return Row(
-      children: TransactionType.values.map((type) {
-        final isSelected = _selectedType == type;
-        return Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: ChoiceChip(
-              label: Text(transactionTypeLabel(type)), // helper.dart
-              selected: isSelected,
-              onSelected: (_) {
-                setState(() => _selectedType = type);
-              },
-            ),
+    final List<TransactionType> chipOrder = [
+    TransactionType.income,       // Income Money
+    TransactionType.debtBorrow,   // Debt To Pay
+    TransactionType.creditBuy,    // Credit Buy
+    TransactionType.savingsAdd,   // Savings
+    TransactionType.lendGive,     // Lend Money
+    TransactionType.expense,      // Expense Money
+    TransactionType.debtRepay,    // Repaid Debt
+    TransactionType.creditPay,    // Credit Paid
+    TransactionType.savingsWithdraw, // Withdraw Savings
+    TransactionType.lendReceive,      // Repaid Lend
+  ];
+
+  final Map<TransactionType, String> shortLabels = {
+    TransactionType.income: 'Income Money',
+    TransactionType.expense: 'Expense Money',
+    TransactionType.debtBorrow: 'Debt To Pay',
+    TransactionType.debtRepay: 'Repaid Debt',
+    TransactionType.creditBuy: 'Credit Buy',
+    TransactionType.creditPay: 'Credit Paid',
+    TransactionType.savingsAdd: 'Savings',
+    TransactionType.savingsWithdraw: 'Withdraw Savings',
+    TransactionType.lendGive: 'Lend Money',
+    TransactionType.lendReceive: 'Repaid Lend',
+  };
+
+
+
+  final screenWidth = MediaQuery.of(context).size.width;
+  final chipWidth = (screenWidth - 32 - 4 * 8) / 5; // 16 padding + 8 spacing*4, 5 chips max per row
+
+  return Wrap(
+    spacing: 4, // chip spacing horizontal
+    runSpacing: 4, // chip spacing vertical
+    children: chipOrder.map(
+      (type) {
+      final isSelected = _selectedType == type;
+      return SizedBox(
+        width: chipWidth,
+        child: ChoiceChip(
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+          label: Text(
+            shortLabels[type]!,
+            textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
-        );
-      }).toList(),
-    );
+          selected: isSelected,
+          onSelected: (_) {
+            setState(() => _selectedType = type);
+          },
+        ),
+      );
+    }).toList(),
+  );
   }
 
   Widget _sourceField() {
