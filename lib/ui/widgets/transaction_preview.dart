@@ -29,8 +29,6 @@ class TransactionPreview extends StatelessWidget {
         case TransactionType.lendGive:
         case TransactionType.lendReceive:
           return Colors.blue;
-        default:
-          return Colors.grey;
       }
     }();
 
