@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-// import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../utils/helpers.dart';
@@ -22,6 +21,20 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   TransactionType _selectedType = TransactionType.expense;
 
+  // ───────── Source Labels ─────────
+  final Map<TransactionType, String> _sourceLabels = {
+    TransactionType.expense: 'Expense Source / Reason',
+    TransactionType.income: 'Income Source',
+    TransactionType.debtBorrow: 'Lend / Borrow From',
+    TransactionType.debtRepay: 'Debt / Receive To',
+    TransactionType.lendGive: 'Lend / Borrow From',
+    TransactionType.lendReceive: 'Debt / Receive To',
+    TransactionType.creditBuy: 'Credit Purchase From',
+    TransactionType.creditPay: 'Credit Payment To',
+    TransactionType.savingsAdd: 'Savings Source / Destination',
+    TransactionType.savingsWithdraw: 'Savings Source / Destination',
+  };
+
   // ───────── Save Logic ─────────
   Future<void> _onSave() async {
     final amountText = _amountController.text.trim();
@@ -43,9 +56,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       return;
     }
 
-    /// Create transaction
+    // ───────── Create transaction ─────────
     final tx = TransactionData(
-      id: const Uuid().v4(),                     // Unique ID
+      id: const Uuid().v4(),
       type: _selectedType,
       amount: amount,
       source: sourceInput,
@@ -55,15 +68,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       monthKey: generateMonthKey(DateTime.now()),
     );
 
-    /// Save to Hive via AppState
     await AppState.addTransaction(tx);
 
-    // Clear inputs
+    // ───────── Clear fields ─────────
     _amountController.clear();
     _sourceController.clear();
     _noteController.clear();
 
-    // Success feedback
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Transaction saved')),
     );
@@ -115,25 +126,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   Widget _sourceField() {
-  final Map<TransactionType, String> sourceLabels = {
-    TransactionType.expense: 'Expense Source / Reason',
-    TransactionType.income: 'Income Source',
-    TransactionType.debtBorrow: 'Lend / Borrow From',
-    TransactionType.lendGive: 'Lend / Borrow From',
-    TransactionType.debtRepay: 'Debt / Receive To',
-    TransactionType.lendReceive: 'Debt / Receive To',
-    TransactionType.creditBuy: 'Credit Purchase From',
-    TransactionType.creditPay: 'Credit Payment To',
-    TransactionType.savingsAdd: 'Savings Source / Destination',
-    TransactionType.savingsWithdraw: 'Savings Source / Destination',
-  };
-
-  final label = sourceLabels[_selectedType] ?? 'Source';
-  
     return TextField(
       controller: _sourceController,
       decoration: InputDecoration(
-        labelText: label,
+        labelText: _sourceLabels[_selectedType] ?? 'Source',
         border: const OutlineInputBorder(),
       ),
     );
