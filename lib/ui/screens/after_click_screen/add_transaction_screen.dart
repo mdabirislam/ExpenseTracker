@@ -115,34 +115,21 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   Widget _sourceField() {
-    String label;
-    switch (_selectedType) {
-      case TransactionType.expense:
-        label = 'Expense Source / Reason';
-        break;
-      case TransactionType.income:
-        label = 'Income Source';
-        break;
-      case TransactionType.debtBorrow:
-      case TransactionType.lendGive:
-        label = 'Lend / Borrow From';
-        break;
-      case TransactionType.debtRepay:
-      case TransactionType.lendReceive:
-        label = 'Debt / Receive To';
-        break;
-      case TransactionType.creditBuy:
-        label = 'Credit Purchase From';
-        break;
-      case TransactionType.creditPay:
-        label = 'Credit Payment To';
-        break;
-      case TransactionType.savingsAdd:
-      case TransactionType.savingsWithdraw:
-        label = 'Savings Source / Destination';
-        break;
-    }
+  final Map<TransactionType, String> sourceLabels = {
+    TransactionType.expense: 'Expense Source / Reason',
+    TransactionType.income: 'Income Source',
+    TransactionType.debtBorrow: 'Lend / Borrow From',
+    TransactionType.lendGive: 'Lend / Borrow From',
+    TransactionType.debtRepay: 'Debt / Receive To',
+    TransactionType.lendReceive: 'Debt / Receive To',
+    TransactionType.creditBuy: 'Credit Purchase From',
+    TransactionType.creditPay: 'Credit Payment To',
+    TransactionType.savingsAdd: 'Savings Source / Destination',
+    TransactionType.savingsWithdraw: 'Savings Source / Destination',
+  };
 
+  final label = sourceLabels[_selectedType] ?? 'Source';
+  
     return TextField(
       controller: _sourceController,
       decoration: InputDecoration(
