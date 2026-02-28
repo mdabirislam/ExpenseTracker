@@ -79,6 +79,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
     await AppState.addTransaction(tx);
 
+    //check if widget active
+    if (!mounted) return;
     // ───────── Clear fields ─────────
     _amountController.clear();
     _sourceController.clear();
@@ -163,8 +165,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             ),
             selected: isSelected,
             onSelected: (_) {
-              //for cmd error
-              if (!mounted) return;
               setState(() => _selectedType = type);
             },
           ),
