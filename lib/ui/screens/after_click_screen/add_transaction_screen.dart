@@ -20,7 +20,16 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final TextEditingController _noteController = TextEditingController();
 
   TransactionType _selectedType = TransactionType.expense;
-
+// disposing text editing controller
+//for making cmd comfort
+//but it didnt worked
+ @override
+  void dispose() {
+    _amountController.dispose();
+    _sourceController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
   // ───────── Source Labels ─────────
   final Map<TransactionType, String> _sourceLabels = {
     TransactionType.expense: 'Expense Source / Reason',
@@ -50,9 +59,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
     final amount = double.tryParse(amountText);
     if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid amount')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Invalid amount')));
       return;
     }
 
@@ -75,9 +84,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     _sourceController.clear();
     _noteController.clear();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Transaction saved')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Transaction saved')));
   }
 
   @override
@@ -107,60 +116,61 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   // ───────── Widgets ─────────
   Widget _transactionTypeSelector() {
     final List<TransactionType> chipOrder = [
-    TransactionType.income,       // Income Money
-    TransactionType.debtBorrow,   // Debt To Pay
-    TransactionType.creditBuy,    // Credit Buy
-    TransactionType.savingsAdd,   // Savings
-    TransactionType.lendGive,     // Lend Money
-    TransactionType.expense,      // Expense Money
-    TransactionType.debtRepay,    // Repaid Debt
-    TransactionType.creditPay,    // Credit Paid
-    TransactionType.savingsWithdraw, // Withdraw Savings
-    TransactionType.lendReceive,      // Repaid Lend
-  ];
+      TransactionType.income, // Income Money
+      TransactionType.debtBorrow, // Debt To Pay
+      TransactionType.creditBuy, // Credit Buy
+      TransactionType.savingsAdd, // Savings
+      TransactionType.lendGive, // Lend Money
+      TransactionType.expense, // Expense Money
+      TransactionType.debtRepay, // Repaid Debt
+      TransactionType.creditPay, // Credit Paid
+      TransactionType.savingsWithdraw, // Withdraw Savings
+      TransactionType.lendReceive, // Repaid Lend
+    ];
 
-  final Map<TransactionType, String> shortLabels = {
-    TransactionType.income: 'Income Money',
-    TransactionType.expense: 'Expense Money',
-    TransactionType.debtBorrow: 'Debt To Pay',
-    TransactionType.debtRepay: 'Repaid Debt',
-    TransactionType.creditBuy: 'Credit Buy',
-    TransactionType.creditPay: 'Credit Paid',
-    TransactionType.savingsAdd: 'Savings',
-    TransactionType.savingsWithdraw: 'Withdraw Savings',
-    TransactionType.lendGive: 'Lend Money',
-    TransactionType.lendReceive: 'Repaid Lend',
-  };
+    final Map<TransactionType, String> shortLabels = {
+      TransactionType.income: 'Income Money',
+      TransactionType.expense: 'Expense Money',
+      TransactionType.debtBorrow: 'Debt To Pay',
+      TransactionType.debtRepay: 'Repaid Debt',
+      TransactionType.creditBuy: 'Credit Buy',
+      TransactionType.creditPay: 'Credit Paid',
+      TransactionType.savingsAdd: 'Savings',
+      TransactionType.savingsWithdraw: 'Withdraw Savings',
+      TransactionType.lendGive: 'Lend Money',
+      TransactionType.lendReceive: 'Repaid Lend',
+    };
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final chipWidth =
+        (screenWidth - 32 - 4 * 8) /
+        5; // 16 padding + 8 spacing*4, 5 chips max per row
 
-
-  final screenWidth = MediaQuery.of(context).size.width;
-  final chipWidth = (screenWidth - 32 - 4 * 8) / 5; // 16 padding + 8 spacing*4, 5 chips max per row
-
-  return Wrap(
-    spacing: 4, // chip spacing horizontal
-    runSpacing: 4, // chip spacing vertical
-    children: chipOrder.map(
-      (type) {
-      final isSelected = _selectedType == type;
-      return SizedBox(
-        width: chipWidth,
-        child: ChoiceChip(
-          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-          label: Text(
-            shortLabels[type]!,
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
+    return Wrap(
+      spacing: 4, // chip spacing horizontal
+      runSpacing: 4, // chip spacing vertical
+      children: chipOrder.map((type) {
+        final isSelected = _selectedType == type;
+        return SizedBox(
+          width: chipWidth,
+          child: ChoiceChip(
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+            label: Text(
+              shortLabels[type]!,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+            selected: isSelected,
+            onSelected: (_) {
+              //for cmd error
+              if (!mounted) return;
+              setState(() => _selectedType = type);
+            },
           ),
-          selected: isSelected,
-          onSelected: (_) {
-            setState(() => _selectedType = type);
-          },
-        ),
-      );
-    }).toList(),
-  );
+        );
+      }).toList(),
+    );
   }
 
   Widget _sourceField() {
