@@ -14,28 +14,27 @@ String transactionTypeLabel(TransactionType type, {String lang = 'en'}) {
 String _enLabel(TransactionType type) {
   switch (type) {
     case TransactionType.income:
-      return 'Income';
+      return 'Money In'; // Income সহজবোধ্যভাবে বোঝায় টাকা এসেছে
     case TransactionType.expense:
-      return 'Expense';
+      return 'Money Out'; // Expense বোঝায় টাকা বের হয়েছে
     case TransactionType.debtBorrow:
-      return 'Borrow Money';
+      return 'Borrowed Money'; // User বুঝবে এটা debt হিসেবে এসেছে
     case TransactionType.debtRepay:
-      return 'Debt Repayment';
+      return 'Debt Repaid'; // Debt pay / repayment
     case TransactionType.creditBuy:
-      return 'Credit Purchase';
+      return 'Credit Purchase'; // Credit-এ কেনা
     case TransactionType.creditPay:
-      return 'Credit Payment';
+      return 'Credit Payment'; // Credit pay / repayment
     case TransactionType.savingsAdd:
-      return 'Add to Savings';
+      return 'Add to Savings'; // Savings-এ টাকা যোগ
     case TransactionType.savingsWithdraw:
-      return 'Withdraw from Savings';
+      return 'Withdraw from Savings'; // Savings থেকে টাকা নেওয়া
     case TransactionType.lendGive:
-      return 'Lend Money';
+      return 'Lent Money'; // User কারো কাছে টাকা দিয়েছে
     case TransactionType.lendReceive:
-      return 'Lend Repay';
+      return 'Money Repaid'; // User টাকা পেয়েছে debt/lend থেকে
   }
 }
-
 String _bnLabel(TransactionType type) {
   switch (type) {
     case TransactionType.income:
@@ -63,20 +62,21 @@ String _bnLabel(TransactionType type) {
 
 /// 🔹 Format date as dd/mm/yyyy
 String formatDate(DateTime date) {
-  return '${date.day.toString().padLeft(2,'0')}/${date.month.toString().padLeft(2,'0')}/${date.year}';
+  return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
 }
 
 /// 🔹 Generate month key (YYYY-MM)
 String generateMonthKey(DateTime date) {
-  return '${date.year.toString().padLeft(4,'0')}-${date.month.toString().padLeft(2,'0')}';
+  return '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}';
 }
 
-/// 🔹 Generate unique source name
-String generateUniqueSource(String source, List<String> existingSources) {
-  if (!existingSources.contains(source)) return source;
-  int i = 1;
-  while (existingSources.contains('$source $i')) {
-    i++;
-  }
-  return '$source $i';
-}
+// /// 🔹 Generate unique source name
+// we have unique id so we dont need this thing
+// String generateUniqueSource(String source, List<String> existingSources) {
+//   if (!existingSources.contains(source)) return source;
+//   int i = 1;
+//   while (existingSources.contains('$source $i')) {
+//     i++;
+//   }
+//   return '$source $i';
+// }
