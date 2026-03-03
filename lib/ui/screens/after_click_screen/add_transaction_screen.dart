@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../../utils/helpers.dart';
 import '../../../models/transaction_type.dart';
@@ -15,7 +14,7 @@ class AddTransactionScreen extends StatefulWidget {
 }
 
 class _AddTransactionScreenState extends State<AddTransactionScreen> {
-  // ───────── Controllers ─────────
+  // Controllers
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _sourceController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
@@ -24,23 +23,24 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final FocusNode _categoryFocus = FocusNode();
 
   TransactionType _selectedType = TransactionType.expense;
+
   String? _selectedCategory;
-
-  late Box _categoryBox;
-
   bool _showDropdown = false;
 
-  Map<TransactionType, List<String>> _typeCategories = {};
-
-  // ───────── Demo Categories ─────────
-  final Map<String, List<String>> _demoByGroup = {
-    'income': ['Income Demo 1', 'Income Demo 2', 'Other'],
-    'expense': ['Expense Demo 1', 'Expense Demo 2', 'Other'],
-    'debt': ['Debt Demo 1', 'Debt Demo 2', 'Other'],
-    'lend': ['Lend Demo 1', 'Lend Demo 2', 'Other'],
+  // Demo categories
+  final Map<TransactionType, List<String>> _typeCategories = {
+    TransactionType.income: ['Salary', 'Business', 'Bonus', 'Other'],
+    TransactionType.expense: ['Food', 'Transport', 'Shopping', 'Other'],
+    TransactionType.debtBorrow: ['Borrow', 'Loan', 'Other'],
+    TransactionType.debtRepay: ['Debt Repay', 'Other'],
+    TransactionType.creditBuy: ['Market', 'Medicine', 'Other'],
+    TransactionType.creditPay: ['Credit Payment', 'Other'],
+    TransactionType.lendGive: ['Lend', 'Other'],
+    TransactionType.lendReceive: ['Receive Back', 'Other'],
+    TransactionType.savingsAdd: ['Savings', 'Other'],
+    TransactionType.savingsWithdraw: ['Withdraw', 'Other'],
   };
 
-  // ───────── Dispose ─────────
   @override
   void dispose() {
     _amountController.dispose();
@@ -51,62 +51,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     super.dispose();
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _initCategorySystem();
-
-    _categoryFocus.addListener(() {
-      if (_categoryFocus.hasFocus) {
-        setState(() => _showDropdown = true);
-      } else {
-        setState(() => _showDropdown = false);
-      }
-    });
-  }
-
-  // ───────── Group detect ─────────
-  String _groupOf(TransactionType type) {
-    if (type == TransactionType.income) return 'income';
-    if (type == TransactionType.expense) return 'expense';
-
-    if (type == TransactionType.debtBorrow ||
-        type == TransactionType.debtRepay ||
-        type == TransactionType.creditBuy ||
-        type == TransactionType.creditPay) {
-      return 'debt';
-    }
-
-    if (type == TransactionType.lendGive ||
-        type == TransactionType.lendReceive) {
-      return 'lend';
-    }
-
-    return 'expense';
-  }
-
-  // ───────── Init Hive ─────────
-  Future<void> _initCategorySystem() async {
-    _categoryBox = await Hive.openBox('transaction_categories');
-
-    for (var type in TransactionType.values) {
-      final key = type.toString();
-      final group = _groupOf(type);
-
-      final saved = _categoryBox.get(key);
-
-      if (saved == null) {
-        _typeCategories[type] = [..._demoByGroup[group]!];
-        await _categoryBox.put(key, _typeCategories[type]);
-      } else {
-        _typeCategories[type] = List<String>.from(saved);
-      }
-    }
-
-    if (mounted) setState(() {});
-  }
-
-  // ───────── Source Labels ─────────
+  // Source labels
   final Map<TransactionType, String> _sourceLabels = {
     TransactionType.expense: 'Expense Source / Reason',
     TransactionType.income: 'Income Source',
@@ -120,16 +65,22 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     TransactionType.savingsWithdraw: 'Savings Source / Destination',
   };
 
-  // ───────── Save Logic ─────────
   Future<void> _onSave() async {
     final amountText = _amountController.text.trim();
     final sourceInput = _sourceController.text.trim();
     final note = _noteController.text.trim();
-    final typedCategory = _categoryController.text.trim();
+    final categoryInput = _categoryController.text.trim();
 
     if (amountText.isEmpty || sourceInput.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Amount and Source are required')),
+      );
+      return;
+    }
+
+    if (categoryInput.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select category')),
       );
       return;
     }
@@ -142,32 +93,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       return;
     }
 
-    String finalCategory;
-
-    if (_selectedCategory != null) {
-      finalCategory = _selectedCategory!;
-    } else if (typedCategory.isEmpty) {
-      final result = await _confirmDialog(
-        'Save as "Other" category?',
-      );
-      if (!result) return;
-      finalCategory = 'Other';
-    } else {
-      final result = await _confirmDialog(
-        'Create new category "$typedCategory"?',
-      );
-      if (!result) return;
-
-      finalCategory = typedCategory;
-
-      final list = _typeCategories[_selectedType]!;
-      if (!list.contains(finalCategory)) {
-        list.add(finalCategory);
-        await _categoryBox.put(
-            _selectedType.toString(), list);
-      }
-    }
-
     final tx = TransactionData(
       id: const Uuid().v4(),
       type: _selectedType,
@@ -175,7 +100,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       source: sourceInput,
       note: note.isEmpty ? null : note,
       date: DateTime.now(),
-      category: finalCategory,
+      category: _selectedCategory ?? categoryInput,
       monthKey: generateMonthKey(DateTime.now()),
     );
 
@@ -189,49 +114,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     _categoryController.clear();
     _selectedCategory = null;
 
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Transaction saved')));
-  }
-
-  Future<bool> _confirmDialog(String text) async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Confirm'),
-        content: Text(text),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('No'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Yes'),
-          ),
-        ],
-      ),
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Transaction saved')),
     );
-
-    return result ?? false;
   }
 
   @override
   Widget build(BuildContext context) {
-    final current = _typeCategories[_selectedType] ?? [];
-
-    final filtered = _categoryController.text.isEmpty
-        ? current
-        : current
-            .where((c) => c
-                .toLowerCase()
-                .contains(_categoryController.text.toLowerCase()))
-            .toList();
-
-    final showAdd = _categoryController.text.isNotEmpty &&
-        !current.any((c) =>
-            c.toLowerCase() ==
-            _categoryController.text.toLowerCase());
-
     return Scaffold(
       appBar: AppBar(title: const Text('Add Transaction')),
       body: SingleChildScrollView(
@@ -243,7 +132,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             const SizedBox(height: 16),
             _sourceField(),
             const SizedBox(height: 16),
-            _categoryField(filtered, showAdd),
+            _categoryField(),
             const SizedBox(height: 16),
             _amountField(),
             const SizedBox(height: 16),
@@ -255,66 +144,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       ),
     );
   }
-
-  // ───────── Category UI ─────────
-  Widget _categoryField(List<String> filtered, bool showAdd) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextField(
-          controller: _categoryController,
-          focusNode: _categoryFocus,
-          decoration: const InputDecoration(
-            labelText: 'Category',
-            border: OutlineInputBorder(),
-          ),
-          onChanged: (_) {
-            setState(() {
-              _selectedCategory = null;
-            });
-          },
-        ),
-        if (_showDropdown)
-          Container(
-            margin: const EdgeInsets.only(top: 4),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              color: Colors.white,
-            ),
-            child: Column(
-              children: [
-                ...filtered.map(
-                  (cat) => ListTile(
-                    title: Text(cat),
-                    onTap: () {
-                      setState(() {
-                        _selectedCategory = cat;
-                        _categoryController.text = cat;
-                        _showDropdown = false;
-                      });
-                    },
-                  ),
-                ),
-                if (showAdd)
-                  ListTile(
-                    leading: const Icon(Icons.add),
-                    title: Text('Add "${_categoryController.text}"'),
-                    onTap: () {
-                      final newCat = _categoryController.text.trim();
-                      setState(() {
-                        _selectedCategory = newCat;
-                        _showDropdown = false;
-                      });
-                    },
-                  ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-
-  // ───────── Existing Widgets (unchanged) ─────────
 
   Widget _transactionTypeSelector() {
     final List<TransactionType> chipOrder = [
@@ -375,6 +204,86 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
+  Widget _categoryField() {
+    final categories = _typeCategories[_selectedType] ?? [];
+
+    final filtered = _categoryController.text.isEmpty
+        ? categories
+        : categories
+            .where((c) => c
+                .toLowerCase()
+                .contains(_categoryController.text.toLowerCase()))
+            .toList();
+
+    final showAddNew =
+        _categoryController.text.isNotEmpty &&
+        !categories.contains(_categoryController.text);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: _categoryController,
+          focusNode: _categoryFocus,
+          decoration: const InputDecoration(
+            labelText: 'Category',
+            border: OutlineInputBorder(),
+          ),
+          onTap: () {
+            setState(() {
+              _showDropdown = true;
+            });
+          },
+          onChanged: (_) {
+            setState(() {
+              _showDropdown = true;
+            });
+          },
+        ),
+        if (_showDropdown)
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            constraints: const BoxConstraints(maxHeight: 200),
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                ...filtered.map(
+                  (cat) => ListTile(
+                    title: Text(cat),
+                    onTap: () {
+                      setState(() {
+                        _selectedCategory = cat;
+                        _categoryController.text = cat;
+                        _showDropdown = false;
+                      });
+                    },
+                  ),
+                ),
+                if (showAddNew)
+                  ListTile(
+                    leading: const Icon(Icons.add),
+                    title: Text('Add "${_categoryController.text}"'),
+                    onTap: () {
+                      final newCat = _categoryController.text.trim();
+
+                      setState(() {
+                        _typeCategories[_selectedType]?.add(newCat);
+                        _selectedCategory = newCat;
+                        _showDropdown = false;
+                      });
+                    },
+                  ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
   Widget _sourceField() {
     return TextField(
       controller: _sourceController,
@@ -411,7 +320,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   Widget _saveButton() {
     return SizedBox(
       width: double.infinity,
-      child: ElevatedButton(onPressed: _onSave, child: const Text('Save')),
+      child: ElevatedButton(
+        onPressed: _onSave,
+        child: const Text('Save'),
+      ),
     );
   }
 }
