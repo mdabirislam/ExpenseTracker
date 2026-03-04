@@ -1,12 +1,40 @@
 import 'package:flutter/material.dart';
+// import 'package:hive_flutter/hive_flutter.dart';
 import '../../models/transaction_model.dart';
 import '../../models/transaction_type.dart';
 import '../../utils/helpers.dart';
+import '../screens/after_click_screen/edit_transaction_screen.dart';
 
 class TransactionPreview extends StatelessWidget {
   final TransactionData tx;
 
   const TransactionPreview({super.key, required this.tx});
+
+  void _deleteTransaction(BuildContext context) async {
+    final confirm = await showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Delete Transaction"),
+        content: const Text(
+          "Are you sure you want to delete this transaction?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Delete"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      tx.delete();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +66,6 @@ class TransactionPreview extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
       child: Row(
         children: [
-          // LEFT SIDE (Source + Date)
           Expanded(
             flex: 4,
             child: Column(
@@ -46,25 +73,19 @@ class TransactionPreview extends StatelessWidget {
               children: [
                 Text(
                   tx.source,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
                 Text(
                   formatDate(tx.date),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),
           ),
 
-          // MIDDLE (Type + Category)
           Expanded(
             flex: 3,
             child: Column(
@@ -82,10 +103,7 @@ class TransactionPreview extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   tx.category,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey,
-                  ),
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
@@ -94,17 +112,50 @@ class TransactionPreview extends StatelessWidget {
             ),
           ),
 
-          // RIGHT SIDE (Amount)
           Expanded(
             flex: 3,
             child: Align(
               alignment: Alignment.centerRight,
-              child: Text(
-                '$sign ৳ ${tx.amount.toStringAsFixed(2)}',
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w700,
-                ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    '$sign ৳ ${tx.amount.toStringAsFixed(2)}',
+                    style: TextStyle(color: color, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(width: 6),
+
+                  PopupMenuButton(
+                    icon: const Icon(Icons.more_vert, size: 18),
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(value: 'edit', child: Text("Edit")),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Text("Delete"),
+                      ),
+                    ],
+                    onSelected: (value) {
+                      if (value == 'delete') {
+                        _deleteTransaction(context);
+                      }
+
+                      if (value == 'edit') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => EditTransactionScreen(tx: tx),
+                          ),
+                        );
+                        // next step: open edit screen
+                        // ScaffoldMessenger.of(context).showSnackBar(
+                        //   const SnackBar(
+                        //     content: Text("Edit system coming next"),
+                        //   ),
+                        // );
+                      }
+                    },
+                  ),
+                ],
               ),
             ),
           ),
