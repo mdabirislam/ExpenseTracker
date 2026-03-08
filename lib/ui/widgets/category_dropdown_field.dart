@@ -20,7 +20,7 @@ class CategoryDropdownField extends StatefulWidget {
 
 class _CategoryDropdownFieldState extends State<CategoryDropdownField> {
   late TextEditingController _controller;
-  String? _selectedCategory;
+  // String? _selectedCategory;
   OverlayEntry? _overlayEntry;
   final LayerLink _layerLink = LayerLink();
 
@@ -28,7 +28,7 @@ class _CategoryDropdownFieldState extends State<CategoryDropdownField> {
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialValue ?? '');
-    _selectedCategory = widget.initialValue;
+    // _selectedCategory = widget.initialValue;
   }
 
   @override
@@ -36,7 +36,7 @@ class _CategoryDropdownFieldState extends State<CategoryDropdownField> {
     super.didUpdateWidget(oldWidget);
     if (widget.initialValue != oldWidget.initialValue) {
       _controller.text = widget.initialValue ?? '';
-      _selectedCategory = widget.initialValue;
+      // _selectedCategory = widget.initialValue;
       _removeOverlay();
     }
   }
@@ -88,7 +88,7 @@ class _CategoryDropdownFieldState extends State<CategoryDropdownField> {
                               title: Text(cat),
                               onTap: () {
                                 _controller.text = cat;
-                                _selectedCategory = cat;
+                                // _selectedCategory = cat;
                                 widget.onSelected(cat);
                                 _removeOverlay();
                                 FocusScope.of(context).unfocus();
@@ -104,7 +104,7 @@ class _CategoryDropdownFieldState extends State<CategoryDropdownField> {
                               await CategoryManager.addCategory(
                                   widget.type, newCat);
                               _controller.text = newCat;
-                              _selectedCategory = newCat;
+                              // _selectedCategory = newCat;
                               widget.onSelected(newCat);
                               _removeOverlay();
                               FocusScope.of(context).unfocus();
