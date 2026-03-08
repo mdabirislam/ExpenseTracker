@@ -5,7 +5,7 @@ import '../widgets/app_bar_widget.dart';
 import '../widgets/balance_summary.dart';
 import '../widgets/info_board.dart';
 import '../widgets/transaction_preview.dart';
-import '../widgets/fab_menu.dart';
+// import '../widgets/fab_menu.dart';
 import '../widgets/charts/monthly_bar_chart.dart';
 import '../../models/transaction_model.dart';
 import '../placeholders/ui_vars.dart';
@@ -23,10 +23,10 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  void _onStartNewMonth() {
-    debugPrint('Start New Month tapped');
-    // future: archive month + savings logic
-  }
+  // void _onStartNewMonth() {
+  //   debugPrint('Start New Month tapped');
+  //   // future: archive month + savings logic
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -46,10 +46,12 @@ class HomeScreen extends StatelessWidget {
             onLanguageTap: () {},
             onThemeTap: () {},
           ),
-          floatingActionButton: FabMenu(
-            onAddTransaction: () => onAddTransaction(context),
-            onStartNewMonth: _onStartNewMonth,
-          ),
+          floatingActionButton: 
+            FloatingActionButton(
+              onPressed: () => onAddTransaction(context),
+              tooltip: 'Add Transaction',
+              child: const Icon(Icons.add),
+            ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
