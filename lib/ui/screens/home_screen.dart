@@ -91,8 +91,10 @@ class HomeScreen extends StatelessWidget {
       mainAxisSpacing: 12,
       childAspectRatio: 1.6,
       children: [
+        InfoBoard(title: boardIncomeTitle, value: '৳ ${AppState.totalIncome.toStringAsFixed(2)}'),
         InfoBoard(title: boardExpenseTitle, value: '৳ ${AppState.totalExpense.toStringAsFixed(2)}'),
         InfoBoard(title: boardDebtTitle, value: '৳ ${AppState.totalDebt.toStringAsFixed(2)}'),
+
         // debtToPay removed as per new design
         InfoBoard(title: boardSavingsTitle, value: '৳ ${AppState.savings.toStringAsFixed(2)}'),
       ],
