@@ -27,7 +27,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   @override
   void initState() {
     super.initState();
-    CategoryManager.init(); // ensure category system ready
+    CategoryManager.init();
   }
 
   @override
@@ -38,21 +38,24 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     super.dispose();
   }
 
+  void _resetForm() {
+    _amountController.clear();
+    _sourceController.clear();
+    _noteController.clear();
+    setState(() {
+      _selectedCategory = null; // triggers dropdown rebuild
+    });
+  }
+
   Future<void> _onSave() async {
     final amountText = _amountController.text.trim();
     final sourceInput = _sourceController.text.trim();
     final note = _noteController.text.trim();
 
+    // Validation checks
     if (amountText.isEmpty || sourceInput.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Amount and Source are required')),
-      );
-      return;
-    }
-
-    if (_selectedCategory == null || _selectedCategory!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select category')),
       );
       return;
     }
@@ -65,6 +68,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       return;
     }
 
+    if (_selectedCategory == null || _selectedCategory!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select category')),
+      );
+      return;
+    }
+
+    // Create Transaction
     final tx = TransactionData(
       id: const Uuid().v4(),
       type: _selectedType,
@@ -80,14 +91,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
     if (!mounted) return;
 
-    _amountController.clear();
-    _sourceController.clear();
-    _noteController.clear();
-    _selectedCategory = null;
-
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Transaction saved')),
     );
+
+    _resetForm();
   }
 
   @override
@@ -104,7 +112,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               onSelected: (type) {
                 setState(() {
                   _selectedType = type;
-                  _selectedCategory = null;
+                  _selectedCategory = null; // reset category on type change
                 });
               },
             ),
@@ -118,9 +126,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             ),
             const SizedBox(height: 16),
             CategoryDropdownField(
+              key: ValueKey(_selectedCategory), // force rebuild
               type: _selectedType,
               initialValue: _selectedCategory,
-              onSelected: (cat) => _selectedCategory = cat,
+              onSelected: (cat) {
+                setState(() {
+                  _selectedCategory = cat;
+                });
+              },
             ),
             const SizedBox(height: 16),
             TextField(

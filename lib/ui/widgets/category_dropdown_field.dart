@@ -31,6 +31,16 @@ class _CategoryDropdownFieldState extends State<CategoryDropdownField> {
   }
 
   @override
+  void didUpdateWidget(covariant CategoryDropdownField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialValue != oldWidget.initialValue) {
+      _controller.text = widget.initialValue ?? '';
+      _selectedCategory = widget.initialValue;
+      _showDropdown = false; // close dropdown on parent reset
+    }
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
