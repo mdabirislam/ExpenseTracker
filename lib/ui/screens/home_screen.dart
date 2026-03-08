@@ -11,7 +11,7 @@ import '../../models/transaction_model.dart';
 import '../placeholders/ui_vars.dart';
 import './after_click_screen/add_transaction_screen.dart';
 import '../../data/local/app_state.dart';
-
+import './history_screen.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -23,6 +23,13 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
+  void onSeeAll(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const HistoryScreen()),
+    );
+  }
+ 
   // void _onStartNewMonth() {
   //   debugPrint('Start New Month tapped');
   //   // future: archive month + savings logic
@@ -61,7 +68,7 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 _infoBoards(),
                 const SizedBox(height: 20),
-                _shortHistory(transactions),
+                _shortHistory(context, transactions),
                 const SizedBox(height: 20),
                 const MonthlyBarChart(),
               ],
@@ -102,7 +109,7 @@ class HomeScreen extends StatelessWidget {
   }
 
   // ───────── Short History ─────────
-  Widget _shortHistory(List<TransactionData> transactions) {
+  Widget _shortHistory(BuildContext context, List<TransactionData> transactions) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -113,7 +120,9 @@ class HomeScreen extends StatelessWidget {
               'Recent',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
-            TextButton(onPressed: () {}, child: const Text('See all')),
+            TextButton(onPressed: ()=> onSeeAll(context),
+            // tooltip: 'See Full History',
+            child: const Text('See all')),
           ],
         ),
         const SizedBox(height: 8),
