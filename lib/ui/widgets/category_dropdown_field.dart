@@ -72,7 +72,7 @@ class _CategoryDropdownFieldState extends State<CategoryDropdownField> {
           onTap: () => setState(() => _showDropdown = true),
           onChanged: (_) {
             setState(() {
-              _selectedCategory = null;
+              _selectedCategory ??= _controller.text;
               _showDropdown = true;
             });
           },
