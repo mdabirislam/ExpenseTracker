@@ -12,6 +12,8 @@ import '../placeholders/ui_vars.dart';
 import './after_click_screen/add_transaction_screen.dart';
 import '../../data/local/app_state.dart';
 import './history_screen.dart';
+import '../widgets/charts/category_pie_chart.dart';
+
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -29,7 +31,7 @@ class HomeScreen extends StatelessWidget {
       MaterialPageRoute(builder: (_) => const HistoryScreen()),
     );
   }
- 
+
   // void _onStartNewMonth() {
   //   debugPrint('Start New Month tapped');
   //   // future: archive month + savings logic
@@ -53,12 +55,11 @@ class HomeScreen extends StatelessWidget {
             onLanguageTap: () {},
             onThemeTap: () {},
           ),
-          floatingActionButton: 
-            FloatingActionButton(
-              onPressed: () => onAddTransaction(context),
-              tooltip: 'Add Transaction',
-              child: const Icon(Icons.add),
-            ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () => onAddTransaction(context),
+            tooltip: 'Add Transaction',
+            child: const Icon(Icons.add),
+          ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -71,6 +72,8 @@ class HomeScreen extends StatelessWidget {
                 _shortHistory(context, transactions),
                 const SizedBox(height: 20),
                 const MonthlyBarChart(),
+                const SizedBox(height: 20),
+                const CategoryPieChart(),
               ],
             ),
           ),
@@ -83,7 +86,9 @@ class HomeScreen extends StatelessWidget {
   Widget _buildBalanceSummary() {
     return BalanceSummary(
       balance: '৳ ${AppState.balance.toStringAsFixed(2)}',
-      statusText: AppState.balance >= 0 ? 'You are under budget' : 'Over budget',
+      statusText: AppState.balance >= 0
+          ? 'You are under budget'
+          : 'Over budget',
       statusColor: AppState.balance >= 0 ? Colors.green : Colors.red,
     );
   }
@@ -98,18 +103,33 @@ class HomeScreen extends StatelessWidget {
       mainAxisSpacing: 12,
       childAspectRatio: 1.6,
       children: [
-        InfoBoard(title: boardIncomeTitle, value: '৳ ${AppState.totalIncome.toStringAsFixed(2)}'),
-        InfoBoard(title: boardExpenseTitle, value: '৳ ${AppState.totalExpense.toStringAsFixed(2)}'),
-        InfoBoard(title: boardDebtTitle, value: '৳ ${AppState.totalDebt.toStringAsFixed(2)}'),
+        InfoBoard(
+          title: boardIncomeTitle,
+          value: '৳ ${AppState.totalIncome.toStringAsFixed(2)}',
+        ),
+        InfoBoard(
+          title: boardExpenseTitle,
+          value: '৳ ${AppState.totalExpense.toStringAsFixed(2)}',
+        ),
+        InfoBoard(
+          title: boardDebtTitle,
+          value: '৳ ${AppState.totalDebt.toStringAsFixed(2)}',
+        ),
 
         // debtToPay removed as per new design
-        InfoBoard(title: boardSavingsTitle, value: '৳ ${AppState.savings.toStringAsFixed(2)}'),
+        InfoBoard(
+          title: boardSavingsTitle,
+          value: '৳ ${AppState.savings.toStringAsFixed(2)}',
+        ),
       ],
     );
   }
 
   // ───────── Short History ─────────
-  Widget _shortHistory(BuildContext context, List<TransactionData> transactions) {
+  Widget _shortHistory(
+    BuildContext context,
+    List<TransactionData> transactions,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -120,13 +140,18 @@ class HomeScreen extends StatelessWidget {
               'Recent',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
-            TextButton(onPressed: ()=> onSeeAll(context),
-            // tooltip: 'See Full History',
-            child: const Text('See all')),
+            TextButton(
+              onPressed: () => onSeeAll(context),
+              // tooltip: 'See Full History',
+              child: const Text('See all'),
+            ),
           ],
         ),
         const SizedBox(height: 8),
-        ...transactions.take(3).map((tx) => TransactionPreview(tx: tx)).toList(),
+        ...transactions
+            .take(3)
+            .map((tx) => TransactionPreview(tx: tx))
+            .toList(),
       ],
     );
   }
