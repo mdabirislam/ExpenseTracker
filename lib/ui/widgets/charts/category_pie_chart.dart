@@ -40,12 +40,22 @@ class _CategoryPieChartState extends State<CategoryPieChart> {
 
         final categoryTotals =
             _calculateCategoryTotals(transactions, _selectedType);
-
-        final sections = categoryTotals.entries.map((entry) {
+        final colors = [
+        Colors.orange,
+        Colors.blue,
+        Colors.green,
+        Colors.purple,
+        ];
+        final sections = categoryTotals.entries.toList().asMap().entries.map((entry) {
+          final idx = entry.key;   // index
+          final e = entry.value;   // MapEntry<String, double>
           return PieChartSectionData(
-            value: entry.value,
-            title: entry.key,
+            value: e.value,
+            title: "${((e.value / categoryTotals.values.reduce((a,b)=>a+b))*100).toStringAsFixed(0)}%",
             radius: 60,
+            color: colors[idx % colors.length],
+            titleStyle: const TextStyle(
+            color: Colors.white, fontWeight: FontWeight.bold),
           );
         }).toList();
 
