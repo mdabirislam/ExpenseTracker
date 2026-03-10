@@ -24,6 +24,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   TransactionType _selectedType = TransactionType.expense;
   String? _selectedCategory;
 
+  DateTime _selectedDate = DateTime.now(); // date select hobe
+
   @override
   void initState() {
     super.initState();
@@ -42,9 +44,26 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     _amountController.clear();
     _sourceController.clear();
     _noteController.clear();
+
     setState(() {
-      _selectedCategory = null; // triggers dropdown rebuild
+      _selectedCategory = null;
+      _selectedDate = DateTime.now();
     });
+  }
+
+  Future<void> _pickDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+
+    if (date != null) {
+      setState(() {
+        _selectedDate = date;
+      });
+    }
   }
 
   Future<void> _onSave() async {
@@ -52,7 +71,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     final sourceInput = _sourceController.text.trim();
     final note = _noteController.text.trim();
 
-    // Validation checks
     if (amountText.isEmpty || sourceInput.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Amount and Source are required')),
@@ -75,7 +93,18 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       return;
     }
 
-    // Create Transaction
+    // current time
+    final now = DateTime.now();
+
+    final finalDateTime = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+      now.hour,
+      now.minute,
+      now.second,
+    );
+
     final tx = TransactionData(
       id: const Uuid().v4(),
       type: _selectedType,
@@ -83,8 +112,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       source: sourceInput,
       note: note.isEmpty ? null : note,
       category: _selectedCategory!,
-      date: DateTime.now(),
-      monthKey: generateMonthKey(DateTime.now()),
+      date: finalDateTime,
+      monthKey: generateMonthKey(finalDateTime),
     );
 
     await AppState.addTransaction(tx);
@@ -112,11 +141,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               onSelected: (type) {
                 setState(() {
                   _selectedType = type;
-                  _selectedCategory = null; // reset category on type change
+                  _selectedCategory = null;
                 });
               },
             ),
+
             const SizedBox(height: 16),
+
             TextField(
               controller: _sourceController,
               decoration: const InputDecoration(
@@ -124,9 +155,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
+
             const SizedBox(height: 16),
+
             CategoryDropdownField(
-              key: ValueKey(_selectedCategory), // force rebuild
+              key: ValueKey(_selectedCategory),
               type: _selectedType,
               initialValue: _selectedCategory,
               onSelected: (cat) {
@@ -135,7 +168,26 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 });
               },
             ),
+
             const SizedBox(height: 16),
+
+            // DATE FIELD
+            InkWell(
+              onTap: _pickDate,
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Date',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.calendar_today),
+                ),
+                child: Text(
+                  "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
             TextField(
               controller: _amountController,
               keyboardType: TextInputType.number,
@@ -145,7 +197,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
+
             const SizedBox(height: 16),
+
             TextField(
               controller: _noteController,
               maxLines: 3,
@@ -154,7 +208,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
+
             const SizedBox(height: 24),
+
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
