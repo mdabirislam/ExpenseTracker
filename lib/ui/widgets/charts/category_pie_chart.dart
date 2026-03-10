@@ -49,7 +49,12 @@ class _CategoryPieChartState extends State<CategoryPieChart> {
           Colors.blue,
           Colors.green,
           Colors.purple,
-        ];
+          Colors.deepOrangeAccent,
+          Colors.teal,
+          Colors.redAccent,
+          Colors.pinkAccent,
+          Colors.grey,
+          ];
         final sections = categoryTotals.entries.toList().asMap().entries.map((
           entry,
         ) {
