@@ -13,6 +13,9 @@ import './after_click_screen/add_transaction_screen.dart';
 import '../../data/local/app_state.dart';
 import './history_screen.dart';
 import '../widgets/charts/category_pie_chart.dart';
+import 'IncomeDetailScreen.dart';
+
+
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -67,7 +70,7 @@ class HomeScreen extends StatelessWidget {
               children: [
                 _buildBalanceSummary(),
                 const SizedBox(height: 16),
-                _infoBoards(),
+                _infoBoards(context),
                 const SizedBox(height: 20),
                 _shortHistory(context, transactions),
                 const SizedBox(height: 20),
@@ -94,36 +97,73 @@ class HomeScreen extends StatelessWidget {
   }
 
   // ───────── Info Boards ─────────
-  Widget _infoBoards() {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.6,
-      children: [
-        InfoBoard(
+Widget _infoBoards(BuildContext context) {
+  return GridView.count(
+    crossAxisCount: 2,
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    crossAxisSpacing: 12,
+    mainAxisSpacing: 12,
+    childAspectRatio: 1.6,
+    children: [
+      // Income Board
+      InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => PlaceholderScreen(title: 'Income Details')),
+          );
+        },
+        child: InfoBoard(
           title: boardIncomeTitle,
           value: '৳ ${AppState.totalIncome.toStringAsFixed(2)}',
         ),
-        InfoBoard(
+      ),
+      
+      // Expense Board
+      InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => PlaceholderScreen(title: 'Expense Details')),
+          );
+        },
+        child: InfoBoard(
           title: boardExpenseTitle,
           value: '৳ ${AppState.totalExpense.toStringAsFixed(2)}',
         ),
-        InfoBoard(
+      ),
+      
+      // Debt Board
+      InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => PlaceholderScreen(title: 'Debt Details')),
+          );
+        },
+        child: InfoBoard(
           title: boardDebtTitle,
           value: '৳ ${AppState.totalDebt.toStringAsFixed(2)}',
         ),
+      ),
 
-        // debtToPay removed as per new design
-        InfoBoard(
+      // Savings Board
+      InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => PlaceholderScreen(title: 'Savings Details')),
+          );
+        },
+        child: InfoBoard(
           title: boardSavingsTitle,
           value: '৳ ${AppState.savings.toStringAsFixed(2)}',
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
 
   // ───────── Short History ─────────
   Widget _shortHistory(
