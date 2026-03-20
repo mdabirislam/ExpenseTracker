@@ -20,7 +20,7 @@ class UiVars {
 }
 
 // info Board
+const String boardIncomeTitle = 'Income';
 const String boardExpenseTitle = 'Expense';
 const String boardDebtTitle = 'Debt';
-const String boardDebtToPayTitle = 'Debt to Pay';
 const String boardSavingsTitle = 'Savings';

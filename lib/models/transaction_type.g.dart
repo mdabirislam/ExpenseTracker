@@ -18,7 +18,21 @@ class TransactionTypeAdapter extends TypeAdapter<TransactionType> {
       case 1:
         return TransactionType.expense;
       case 2:
-        return TransactionType.debt;
+        return TransactionType.debtBorrow;
+      case 3:
+        return TransactionType.debtRepay;
+      case 4:
+        return TransactionType.creditBuy;
+      case 5:
+        return TransactionType.creditPay;
+      case 6:
+        return TransactionType.savingsAdd;
+      case 7:
+        return TransactionType.savingsWithdraw;
+      case 8:
+        return TransactionType.lendGive;
+      case 9:
+        return TransactionType.lendReceive;
       default:
         return TransactionType.income;
     }
@@ -33,8 +47,29 @@ class TransactionTypeAdapter extends TypeAdapter<TransactionType> {
       case TransactionType.expense:
         writer.writeByte(1);
         break;
-      case TransactionType.debt:
+      case TransactionType.debtBorrow:
         writer.writeByte(2);
+        break;
+      case TransactionType.debtRepay:
+        writer.writeByte(3);
+        break;
+      case TransactionType.creditBuy:
+        writer.writeByte(4);
+        break;
+      case TransactionType.creditPay:
+        writer.writeByte(5);
+        break;
+      case TransactionType.savingsAdd:
+        writer.writeByte(6);
+        break;
+      case TransactionType.savingsWithdraw:
+        writer.writeByte(7);
+        break;
+      case TransactionType.lendGive:
+        writer.writeByte(8);
+        break;
+      case TransactionType.lendReceive:
+        writer.writeByte(9);
         break;
     }
   }

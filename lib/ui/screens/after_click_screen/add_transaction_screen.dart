@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
-import '../../../utils/helpers.dart';
+import 'package:uuid/uuid.dart';
+
+import '../../../models/transaction_model.dart';
 import '../../../models/transaction_type.dart';
 import '../../../data/local/app_state.dart';
-import '../../../models/transaction_model.dart';
+import '../../../data/local/category_manager.dart';
+import '../../widgets/transaction_type_selector.dart';
+import '../../widgets/category_dropdown_field.dart';
+import '../../../utils/helpers.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   const AddTransactionScreen({super.key});
@@ -13,97 +17,115 @@ class AddTransactionScreen extends StatefulWidget {
 }
 
 class _AddTransactionScreenState extends State<AddTransactionScreen> {
-  // ───────── Controllers ─────────
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _sourceController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
 
   TransactionType _selectedType = TransactionType.expense;
+  String? _selectedCategory;
 
-// ───────── Save Logic ─────────
-Future<void> _onSave() async {
-  final amountText = _amountController.text.trim();
-  final sourceInput = _sourceController.text.trim();
-  final note = _noteController.text.trim();
+  DateTime _selectedDate = DateTime.now(); // date select hobe
 
-  if (amountText.isEmpty || sourceInput.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Amount and Source are required')),
-    );
-    return;
+  @override
+  void initState() {
+    super.initState();
+    CategoryManager.init();
   }
 
-  final amount = double.tryParse(amountText);
-  if (amount == null || amount <= 0) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Invalid amount')),
-    );
-    return;
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _sourceController.dispose();
+    _noteController.dispose();
+    super.dispose();
   }
 
-  /// Hive box
-  final box = Hive.box<TransactionData>('transactions');
+  void _resetForm() {
+    _amountController.clear();
+    _sourceController.clear();
+    _noteController.clear();
 
-  /// Existing sources
-  final existingSources = box.values.map((tx) => tx.source).toList();
+    setState(() {
+      _selectedCategory = null;
+      _selectedDate = DateTime.now();
+    });
+  }
 
-  String finalSource = sourceInput;
-  // ─── Duplicate source handling ───
-  if (existingSources.contains(sourceInput)) {
-    final result = await showDialog<String>(
+  Future<void> _pickDate() async {
+    final date = await showDatePicker(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Source already exists'),
-        content: const Text(
-          'This source already exists. Do you want to merge or create a new one?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, 'merge'),
-            child: const Text('Merge'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, 'new'),
-            child: const Text('Create New'),
-          ),
-        ],
-      ),
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
     );
 
-    if (result == 'new') {
-      finalSource = generateUniqueSource(sourceInput, existingSources);
+    if (date != null) {
+      setState(() {
+        _selectedDate = date;
+      });
     }
   }
 
-  /// Create transaction
-  final tx = TransactionData(
-    type: _selectedType, 
-    amount: amount,
-    source: finalSource,
-    note: note.isEmpty ? null : note,
-    date: DateTime.now(),
-    
-  );
+  Future<void> _onSave() async {
+    final amountText = _amountController.text.trim();
+    final sourceInput = _sourceController.text.trim();
+    final note = _noteController.text.trim();
 
-  /// Save to Hive via AppState
-  await AppState.addTransaction(tx);
-  // await box.add(tx); // 🔥 DIRECT Hive add
+    if (amountText.isEmpty || sourceInput.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Amount and Source are required')),
+      );
+      return;
+    }
 
-  /// ✅ Clear only inputs (NOT type)
-  _amountController.clear();
-  _sourceController.clear();
-  _noteController.clear();
+    final amount = double.tryParse(amountText);
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid amount')),
+      );
+      return;
+    }
 
-//.....reset transaction type after save........
-  // setState(() {
-  //   _selectedType = TransactionType.expense; // default
-  // });
+    if (_selectedCategory == null || _selectedCategory!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select category')),
+      );
+      return;
+    }
 
-  ///  success feedback
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('Transaction saved')),
-  );
-}
+    // current time
+    final now = DateTime.now();
+
+    final finalDateTime = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+      now.hour,
+      now.minute,
+      now.second,
+    );
+
+    final tx = TransactionData(
+      id: const Uuid().v4(),
+      type: _selectedType,
+      amount: amount,
+      source: sourceInput,
+      note: note.isEmpty ? null : note,
+      category: _selectedCategory!,
+      date: finalDateTime,
+      monthKey: generateMonthKey(finalDateTime),
+    );
+
+    await AppState.addTransaction(tx);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Transaction saved')),
+    );
+
+    _resetForm();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -114,88 +136,91 @@ Future<void> _onSave() async {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _transactionTypeSelector(),
+            TransactionTypeSelector(
+              selectedType: _selectedType,
+              onSelected: (type) {
+                setState(() {
+                  _selectedType = type;
+                  _selectedCategory = null;
+                });
+              },
+            ),
+
             const SizedBox(height: 16),
 
-            _sourceField(),
+            TextField(
+              controller: _sourceController,
+              decoration: const InputDecoration(
+                labelText: 'Source',
+                border: OutlineInputBorder(),
+              ),
+            ),
+
             const SizedBox(height: 16),
 
-            _amountField(),
+            CategoryDropdownField(
+              key: ValueKey(_selectedCategory),
+              type: _selectedType,
+              initialValue: _selectedCategory,
+              onSelected: (cat) {
+                setState(() {
+                  _selectedCategory = cat;
+                });
+              },
+            ),
+
             const SizedBox(height: 16),
 
-            _noteField(),
+            // DATE FIELD
+            InkWell(
+              onTap: _pickDate,
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Date',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.calendar_today),
+                ),
+                child: Text(
+                  "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            TextField(
+              controller: _amountController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Amount',
+                prefixText: '৳ ',
+                border: OutlineInputBorder(),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            TextField(
+              controller: _noteController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Note (optional)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+
             const SizedBox(height: 24),
 
-            _saveButton(),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _onSave,
+                child: const Text('Save'),
+              ),
+            ),
           ],
         ),
       ),
-    );
-  }
-
-  // ───────── Widgets ─────────
-
-  Widget _transactionTypeSelector() {
-    return Row(
-      children: TransactionType.values.map((type) {
-        final isSelected = _selectedType == type;
-        return Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: ChoiceChip(
-              label: Text(transactionTypeLabel(type)),
-              selected: isSelected,
-              onSelected: (_) {
-                setState(() => _selectedType = type);
-              },
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _sourceField() {
-    return TextField(
-      controller: _sourceController,
-      decoration: InputDecoration(
-        labelText: _selectedType == TransactionType.expense
-            ? 'Expense Source / Reason'
-            : _selectedType == TransactionType.income
-            ? 'Income Source'
-            : 'Debt From / To',
-        border: const OutlineInputBorder(),
-      ),
-    );
-  }
-
-  Widget _amountField() {
-    return TextField(
-      controller: _amountController,
-      keyboardType: TextInputType.number,
-      decoration: const InputDecoration(
-        labelText: 'Amount',
-        prefixText: '৳ ',
-        border: OutlineInputBorder(),
-      ),
-    );
-  }
-
-  Widget _noteField() {
-    return TextField(
-      controller: _noteController,
-      maxLines: 3,
-      decoration: const InputDecoration(
-        labelText: 'Note (optional)',
-        border: OutlineInputBorder(),
-      ),
-    );
-  }
-
-  Widget _saveButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(onPressed: _onSave, child: const Text('Save')),
     );
   }
 }

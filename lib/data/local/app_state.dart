@@ -1,7 +1,6 @@
 import 'package:hive/hive.dart';
 import '../../models/transaction_model.dart';
-//import '../../utils/helpers.dart';
-import '../.././models/transaction_type.dart';
+import '../../models/transaction_type.dart';
 
 class AppState {
   static late Box<TransactionData> _txBox;
@@ -9,60 +8,70 @@ class AppState {
   static double totalExpense = 0.0;
   static double totalIncome = 0.0;
   static double totalDebt = 0.0;
-  static double debtToPay = 0.0;
+  static double totalLend = 0.0;
+  static double totalReceivable = 0.0;
   static double savings = 0.0;
   static double balance = 0.0;
 
-  /// Initialize Hive box and calculate totals
+  /// Init Hive box
   static Future<void> init() async {
     _txBox = Hive.box<TransactionData>('transactions');
-    recalculateFromBox(_txBox);
-    // _recalculate();
+    recalculateFromBox();
   }
 
-  /// Add transaction and recalculate totals
+  /// Add transaction
   static Future<void> addTransaction(TransactionData tx) async {
-    // 🔹 Future:
-    // - check if source exists
-    // - ask merge or rename
-    // - use generateUniqueSource() from helpers.dart
+    // Savings validation
+    if (tx.type == TransactionType.savingsWithdraw && tx.amount > savings) {
+      throw Exception(
+          'Cannot withdraw more than available savings: $savings');
+    }
+
+    // Optional: Lend validation
     await _txBox.add(tx);
-    recalculateFromBox(_txBox);
-    // _recalculate();
+    recalculateFromBox();
   }
 
-  /// Expose transactions in reverse chronological order
+  /// Get all transactions (latest first)
   static List<TransactionData> get transactions =>
       _txBox.values.toList().reversed.toList();
 
   /// Recalculate totals
-  static void recalculateFromBox(Box<TransactionData> box) {
-    totalExpense = 0.0;
-    totalIncome = 0.0;
-    totalDebt = 0.0;
+  static void recalculateFromBox() {
+    totalExpense = 0;
+    totalIncome = 0;
+    totalDebt = 0;
+    totalLend = 0;
+    totalReceivable = 0;
+    savings = 0;
+    balance = 0;
 
     for (final tx in _txBox.values) {
-      switch (tx.type) {
-        case TransactionType.expense:
-          totalExpense += tx.amount;
-          break;
-        case TransactionType.income:
-          totalIncome += tx.amount;
-          break;
-        case TransactionType.debt:
-          totalDebt += tx.amount;
-          break;
-      }
+      
+      if (tx.isPlanned) continue;
+
+      final amount = tx.amount;
+
+      // Income / Expense totals
+      if (tx.type == TransactionType.income) totalIncome += amount;
+      if (tx.type == TransactionType.expense) totalExpense += amount;
+
+      // Balance
+      balance += amount * tx.type.balanceEffect;
+
+      // Debt
+      totalDebt += amount * tx.type.debtEffect;
+
+      // Savings
+      savings += amount * tx.type.savingsEffect;
+
+      // Receivable / Lend
+      totalReceivable += amount * tx.type.receivableEffect;
     }
 
-    // Savings is income - expense
-    savings = totalIncome - totalExpense;
-
-    // Debt to pay is total debt minus savings
-    debtToPay = totalDebt - savings;
-    if (debtToPay < 0) debtToPay = 0.0;
-
-    // Balance = income - expense - debtToPay (or can just be savings)
-    balance = savings - debtToPay;
+    // Safety checks
+    if (savings < 0) savings = 0;
+    if (totalDebt < 0) totalDebt = 0;
+    if (totalReceivable < 0) totalReceivable = 0;
   }
 }
