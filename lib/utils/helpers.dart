@@ -1,4 +1,6 @@
 import '../models/transaction_type.dart';
+import 'package:flutter/material.dart';
+// import 'package:hive_flutter/hive_flutter.dart';
 
 // TransactionType label with short, user-friendly names
 String transactionTypeLabel(TransactionType type, {String lang = 'en'}) {
@@ -81,4 +83,11 @@ String generateMonthKey(DateTime date) {
 //     i++;
 //   }
 //   return '$source $i';
+// }
+
+// void _navigate(BuildContext context, Widget screen) {
+//   Navigator.push(
+//     context,
+//     MaterialPageRoute(builder: (_) => screen),
+//   );
 // }

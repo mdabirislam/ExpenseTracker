@@ -13,9 +13,11 @@ import './after_click_screen/add_transaction_screen.dart';
 import '../../data/local/app_state.dart';
 import './history_screen.dart';
 import '../widgets/charts/category_pie_chart.dart';
-import 'IncomeDetailScreen.dart';
-
-
+// import './../../utils/helpers.dart';
+import 'after_click_screen/IncomeDetailScreen.dart';
+import 'after_click_screen/DebtDetailScreen.dart';
+import 'after_click_screen/SavingsDetailScreen.dart';
+import 'after_click_screen/ExpenseDetailScreen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -39,6 +41,14 @@ class HomeScreen extends StatelessWidget {
   //   debugPrint('Start New Month tapped');
   //   // future: archive month + savings logic
   // }
+
+void _navigate(BuildContext context, Widget screen) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => screen),
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -108,12 +118,7 @@ Widget _infoBoards(BuildContext context) {
     children: [
       // Income Board
       InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => PlaceholderScreen(title: 'Income Details')),
-          );
-        },
+        onTap: () =>_navigate(context, IncomeDetailScreen()),
         child: InfoBoard(
           title: boardIncomeTitle,
           value: '৳ ${AppState.totalIncome.toStringAsFixed(2)}',
@@ -122,12 +127,7 @@ Widget _infoBoards(BuildContext context) {
       
       // Expense Board
       InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => PlaceholderScreen(title: 'Expense Details')),
-          );
-        },
+        onTap: () =>_navigate(context, ExpenseDetailScreen()),
         child: InfoBoard(
           title: boardExpenseTitle,
           value: '৳ ${AppState.totalExpense.toStringAsFixed(2)}',
@@ -136,12 +136,7 @@ Widget _infoBoards(BuildContext context) {
       
       // Debt Board
       InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => PlaceholderScreen(title: 'Debt Details')),
-          );
-        },
+        onTap: () =>_navigate(context, DebtDetailScreen()),
         child: InfoBoard(
           title: boardDebtTitle,
           value: '৳ ${AppState.totalDebt.toStringAsFixed(2)}',
@@ -150,12 +145,7 @@ Widget _infoBoards(BuildContext context) {
 
       // Savings Board
       InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => PlaceholderScreen(title: 'Savings Details')),
-          );
-        },
+        onTap: () =>_navigate(context, SavingsDetailScreen()),
         child: InfoBoard(
           title: boardSavingsTitle,
           value: '৳ ${AppState.savings.toStringAsFixed(2)}',
