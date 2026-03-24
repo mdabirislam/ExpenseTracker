@@ -1,16 +1,42 @@
 import 'package:flutter/material.dart';
 import '../../placeholders/fake_data.dart';
 
-class ExpenseDetailScreen extends StatelessWidget {
+class ExpenseDetailScreen extends StatefulWidget {
   const ExpenseDetailScreen({super.key});
 
-  Future<void> _selectDate(BuildContext context, bool isFrom) async {
-    await showDatePicker(
+  @override
+  State<ExpenseDetailScreen> createState() => _ExpenseDetailScreenState();
+}
+
+class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
+
+  DateTime? fromDate;
+  DateTime? toDate;
+
+  // 📅 Date Picker
+  Future<void> _selectDate(bool isFrom) async {
+    final picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
+
+    if (picked != null) {
+      setState(() {
+        if (isFrom) {
+          fromDate = picked;
+        } else {
+          toDate = picked;
+        }
+      });
+    }
+  }
+
+  // 📅 Format
+  String formatDate(DateTime? date) {
+    if (date == null) return 'DD/MM/YY';
+    return "${date.day}/${date.month}/${date.year}";
   }
 
   @override
@@ -21,17 +47,17 @@ class ExpenseDetailScreen extends StatelessWidget {
         centerTitle: true,
         backgroundColor: Colors.green,
 
-        // ✅ FIXED APPBAR BOTTOM
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(120),
-          child: Padding(
+          child: Container(
+            color: Colors.green,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(
               children: [
                 // From
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => _selectDate(context, true),
+                    onTap: () => _selectDate(true),
                     child: Container(
                       height: 80,
                       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -40,11 +66,11 @@ class ExpenseDetailScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(16),
                         color: Colors.white24,
                       ),
-                      child: const Align(
+                      child: Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          'From -\nDD/MM/YY',
-                          style: TextStyle(
+                          'From -\n${formatDate(fromDate)}',
+                          style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
@@ -60,7 +86,7 @@ class ExpenseDetailScreen extends StatelessWidget {
                 // To
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => _selectDate(context, false),
+                    onTap: () => _selectDate(false),
                     child: Container(
                       height: 80,
                       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -69,11 +95,11 @@ class ExpenseDetailScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(16),
                         color: Colors.white24,
                       ),
-                      child: const Align(
+                      child: Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          'To -\nDD/MM/YY',
-                          style: TextStyle(
+                          'To -\n${formatDate(toDate)}',
+                          style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
@@ -86,7 +112,7 @@ class ExpenseDetailScreen extends StatelessWidget {
 
                 const SizedBox(width: 8),
 
-                // Buttons (FIXED)
+                // Buttons
                 Expanded(
                   child: SizedBox(
                     height: 80,
@@ -97,7 +123,10 @@ class ExpenseDetailScreen extends StatelessWidget {
                           height: 36,
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              print("From: $fromDate");
+                              print("To: $toDate");
+                            },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white,
                               foregroundColor: Colors.green,
@@ -105,17 +134,19 @@ class ExpenseDetailScreen extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(16),
                               ),
                             ),
-                            child: const Text(
-                              'Filter',
-                              style: TextStyle(fontSize: 13),
-                            ),
+                            child: const Text('Filter', style: TextStyle(fontSize: 13)),
                           ),
                         ),
                         SizedBox(
                           height: 36,
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              setState(() {
+                                fromDate = null;
+                                toDate = null;
+                              });
+                            },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white,
                               foregroundColor: Colors.green,
@@ -123,10 +154,7 @@ class ExpenseDetailScreen extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(16),
                               ),
                             ),
-                            child: const Text(
-                              'All Time',
-                              style: TextStyle(fontSize: 13),
-                            ),
+                            child: const Text('All Time', style: TextStyle(fontSize: 12), textAlign: TextAlign.center,),
                           ),
                         ),
                       ],
@@ -147,9 +175,7 @@ class ExpenseDetailScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surfaceVariant,
               border: Border(
-                bottom: BorderSide(
-                  color: Colors.grey.withOpacity(0.3),
-                ),
+                bottom: BorderSide(color: Colors.grey.withOpacity(0.3)),
               ),
             ),
             child: Row(
@@ -218,25 +244,17 @@ class ExpenseDetailScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         flex: 5,
-                        child: Text(
-                          item['category'],
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        child: Text(item['category'], maxLines: 2, overflow: TextOverflow.ellipsis),
                       ),
                       Expanded(
                         flex: 2,
-                        child: Center(
-                          child: Text(item['count'].toString()),
-                        ),
+                        child: Center(child: Text(item['count'].toString())),
                       ),
                       Expanded(
                         flex: 3,
                         child: Align(
                           alignment: Alignment.centerRight,
-                          child: Text(
-                            '৳ ${(item['amount'] as num).toStringAsFixed(2)}',
-                          ),
+                          child: Text('৳ ${(item['amount'] as num).toStringAsFixed(2)}'),
                         ),
                       ),
                     ],
