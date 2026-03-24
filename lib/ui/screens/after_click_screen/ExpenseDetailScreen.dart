@@ -1,18 +1,16 @@
 import 'package:flutter/material.dart';
-import '../../placeholders/fake_data.dart'; // adjust path
+import '../../placeholders/fake_data.dart';
 
 class ExpenseDetailScreen extends StatelessWidget {
   const ExpenseDetailScreen({super.key});
 
-  // Helper to show date picker (needs context)
   Future<void> _selectDate(BuildContext context, bool isFrom) async {
-    final DateTime? picked = await showDatePicker(
+    await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
-    // No state change here since StatelessWidget; in real app replace with setState in StatefulWidget
   }
 
   @override
@@ -22,101 +20,118 @@ class ExpenseDetailScreen extends StatelessWidget {
         title: const Text('Expense Details'),
         centerTitle: true,
         backgroundColor: Colors.green,
+
+        // ✅ FIXED APPBAR BOTTOM
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(130),
+          preferredSize: const Size.fromHeight(120),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Column(
+            child: Row(
               children: [
-                // From / To Chips stacked vertically in Row
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          GestureDetector(
-                            onTap: () => _selectDate(context, true),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.white70),
-                                borderRadius: BorderRadius.circular(16),
-                                color: Colors.white24,
-                              ),
-                              child: const FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  'From',
-                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            ),
+                // From
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => _selectDate(context, true),
+                    child: Container(
+                      height: 80,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.white70),
+                        borderRadius: BorderRadius.circular(16),
+                        color: Colors.white24,
+                      ),
+                      child: const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'From -\nDD/MM/YY',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
                           ),
-                          const SizedBox(height: 4),
-                          GestureDetector(
-                            onTap: () => _selectDate(context, false),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.white70),
-                                borderRadius: BorderRadius.circular(16),
-                                color: Colors.white24,
-                              ),
-                              child: const FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  'To',
-                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
-                
-                const SizedBox(height: 8),
 
-                // Filter + All Time Buttons (Row below chips)
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.green,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text('Filter', style: TextStyle(fontSize: 14)),
+                const SizedBox(width: 8),
+
+                // To
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => _selectDate(context, false),
+                    child: Container(
+                      height: 80,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.white70),
+                        borderRadius: BorderRadius.circular(16),
+                        color: Colors.white24,
+                      ),
+                      child: const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'To -\nDD/MM/YY',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.green,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+
+                // Buttons (FIXED)
+                Expanded(
+                  child: SizedBox(
+                    height: 80,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        SizedBox(
+                          height: 36,
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {},
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.green,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: const Text(
+                              'Filter',
+                              style: TextStyle(fontSize: 13),
+                            ),
+                          ),
                         ),
-                        child: const FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text('All Time', style: TextStyle(fontSize: 14)),
+                        SizedBox(
+                          height: 36,
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {},
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.green,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: const Text(
+                              'All Time',
+                              style: TextStyle(fontSize: 13),
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
@@ -126,13 +141,15 @@ class ExpenseDetailScreen extends StatelessWidget {
 
       body: Column(
         children: [
-          // Total Income row
+          // Top summary
           Container(
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surfaceVariant,
               border: Border(
-                bottom: BorderSide(color: Colors.grey.withOpacity(0.3), width: 1),
+                bottom: BorderSide(
+                  color: Colors.grey.withOpacity(0.3),
+                ),
               ),
             ),
             child: Row(
@@ -141,7 +158,6 @@ class ExpenseDetailScreen extends StatelessWidget {
                   flex: 5,
                   child: Text(
                     'Total Income : 000000',
-                    textAlign: TextAlign.left,
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
@@ -155,9 +171,8 @@ class ExpenseDetailScreen extends StatelessWidget {
                     alignment: Alignment.centerRight,
                     child: InkWell(
                       onTap: () {},
-                      borderRadius: BorderRadius.circular(6),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
                         child: Text(
                           'Show Details',
                           style: TextStyle(
@@ -174,40 +189,53 @@ class ExpenseDetailScreen extends StatelessWidget {
             ),
           ),
 
-          // Table header
+          // Header
           Container(
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
             color: Colors.grey[300],
             child: Row(
               children: const [
                 Expanded(flex: 5, child: Text('Category', style: TextStyle(fontWeight: FontWeight.bold))),
-                Expanded(flex: 2, child: Text('Count', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-                Expanded(flex: 3, child: Text('Amount', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
+                Expanded(flex: 2, child: Text('Count', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
+                Expanded(flex: 3, child: Text('Amount', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
               ],
             ),
           ),
-          const Divider(height: 1, color: Colors.black26),
 
-          // Expense List
+          const Divider(height: 1),
+
+          // List
           Expanded(
             child: ListView.separated(
               itemCount: dummyExpense.length,
-              separatorBuilder: (_, __) => const Divider(height: 1, color: Colors.black12),
+              separatorBuilder: (_, __) => const Divider(height: 1),
               itemBuilder: (context, index) {
                 final item = dummyExpense[index];
+
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                   child: Row(
                     children: [
-                      Expanded(flex: 5, child: Text(item['category'], maxLines: 2, overflow: TextOverflow.ellipsis)),
-                      Expanded(flex: 2, child: Center(child: Text(item['count'].toString()))),
+                      Expanded(
+                        flex: 5,
+                        child: Text(
+                          item['category'],
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Expanded(
+                        flex: 2,
+                        child: Center(
+                          child: Text(item['count'].toString()),
+                        ),
+                      ),
                       Expanded(
                         flex: 3,
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: Text('৳ ${item['amount'].toStringAsFixed(2)}'),
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            '৳ ${(item['amount'] as num).toStringAsFixed(2)}',
                           ),
                         ),
                       ),
