@@ -8,6 +8,12 @@ class MenuScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
+    /// ✅ check on screen load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkMonthStatus(context);
+    });
+
     return Scaffold(
       appBar: AppBar(title: const Text('Menu / Settings')),
       body: ListView(
@@ -22,13 +28,9 @@ class MenuScreen extends StatelessWidget {
             icon: Icons.calendar_month,
             title: 'Set Month',
             onTap: () async {
-              // Ensure Hive box is ready
-              // await AppState.initMonths();
-//init on app start on main, not here
               final existingRange = AppState.getCurrentMonthRange();
 
               if (existingRange != null) {
-                // Popup if month range exists
                 showDialog(
                   context: context,
                   builder: (_) => AlertDialog(
@@ -36,8 +38,7 @@ class MenuScreen extends StatelessWidget {
                     content: Text(
                       "Month: ${existingRange.monthName}\n"
                       "Start: ${formatDate(existingRange.start)}\n"
-                      "End: ${formatDate(existingRange.end)}\n\n"
-                      "Do you want to edit it?"
+                      "End: ${formatDate(existingRange.end)}",
                     ),
                     actions: [
                       TextButton(
@@ -55,7 +56,10 @@ class MenuScreen extends StatelessWidget {
                                   startDate: existingRange.start,
                                   startMode: 'custom',
                                   endMode: 'fixed',
-                                  fixedDays: existingRange.end.difference(existingRange.start).inDays + 1,
+                                  fixedDays: existingRange.end
+                                          .difference(existingRange.start)
+                                          .inDays +
+                                      1,
                                 ),
                               ),
                             ),
@@ -67,7 +71,6 @@ class MenuScreen extends StatelessWidget {
                   ),
                 );
               } else {
-                // No data → open directly
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => SetMonthScreen()),
@@ -75,26 +78,114 @@ class MenuScreen extends StatelessWidget {
               }
             },
           ),
-          _buildMenuTile(
-            icon: Icons.save,
-            title: 'Save / Delete Month Data',
-            onTap: () {},
+        ],
+      ),
+    );
+  }
+
+  /// ✅ check logic
+  void _checkMonthStatus(BuildContext context) {
+    final days = AppState.getRemainingDays();
+
+    if (days != null && days <= 5) {
+      _showMonthAlert(context, days);
+    }
+  }
+
+  /// ✅ popup
+  void _showMonthAlert(BuildContext context, int days) {
+    final range = AppState.getCurrentMonthRange();
+    if (range == null) return;
+
+    Color statusColor;
+    if (days <= 3) {
+      statusColor = Colors.red;
+    } else if (days <= 5) {
+      statusColor = Colors.orange;
+    } else {
+      statusColor = Colors.green;
+    }
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Month Info"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Month: ${range.monthName}"),
+            Text("Start: ${formatDate(range.start)}"),
+            Text("End: ${formatDate(range.end)}"),
+
+            const SizedBox(height: 10),
+
+            Row(
+              children: [
+                const Text("Remaining: "),
+                Text(
+                  "$days days",
+                  style: TextStyle(
+                    color: statusColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            Text(
+              days <= 3
+                  ? "তুমি কি বর্তমান মাস পরিবর্তন করতে চাও নাকি next month set করতে চাও?"
+                  : "তুমি কি বর্তমান মাস পরিবর্তন করতে চাও?",
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
           ),
-          _buildMenuTile(
-            icon: Icons.dark_mode,
-            title: 'App Theme / Dark Mode',
-            onTap: () {},
+
+          /// edit current
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SetMonthScreen(
+                    initialSettings: MonthSettings(
+                      startDate: range.start,
+                      startMode: 'custom',
+                      endMode: 'fixed',
+                      fixedDays:
+                          range.end.difference(range.start).inDays + 1,
+                    ),
+                  ),
+                ),
+              );
+            },
+            child: const Text("Edit Current"),
           ),
-          _buildMenuTile(
-            icon: Icons.language,
-            title: 'Language Switch',
-            onTap: () {},
-          ),
-          _buildMenuTile(
-            icon: Icons.exit_to_app,
-            title: 'Exit',
-            onTap: () {},
-          ),
+
+          /// next month
+          if (days <= 3)
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const SetMonthScreen(),
+                  ),
+                );
+              },
+              child: const Text("Set Next Month"),
+            ),
         ],
       ),
     );

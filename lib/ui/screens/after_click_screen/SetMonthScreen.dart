@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../data/local/app_state.dart';
-
+// import '../../../models/month_range_model.dart';
+import '../../../utils/date_utils.dart';
 class MonthSettings {
   DateTime? startDate;
   String startMode; // now | tomorrow | yesterday | custom
@@ -17,9 +18,8 @@ class MonthSettings {
 
 class SetMonthScreen extends StatefulWidget {
   final MonthSettings? initialSettings;
-  final void Function(MonthSettings settings)? onSave;
 
-  const SetMonthScreen({super.key, this.initialSettings, this.onSave});
+  const SetMonthScreen({super.key, this.initialSettings});
 
   @override
   State<SetMonthScreen> createState() => _SetMonthScreenState();
@@ -28,21 +28,36 @@ class SetMonthScreen extends StatefulWidget {
 class _SetMonthScreenState extends State<SetMonthScreen> {
   late MonthSettings settings;
   bool isCustomDays = false;
-  DateTime? prevMonthEndDate;
 
-@override
-void initState() {
-  super.initState();
-  settings = widget.initialSettings ?? MonthSettings();
+  @override
+  void initState() {
+    super.initState();
 
-  // Prefill for fixed/custom mode
-  if (settings.startDate != null) {
-    settings.startMode = 'custom';
+    // ১. যদি initialSettings আছে → use that
+    if (widget.initialSettings != null) {
+      settings = widget.initialSettings!;
+    } else {
+      // ২. Hive থেকে current month range read
+      final current = AppState.getCurrentMonthRange();
+      if (current != null) {
+        settings = MonthSettings(
+          startDate: current.start,
+          startMode: 'custom',
+          endMode: 'fixed',
+          fixedDays: current.end.difference(current.start).inDays + 1,
+        );
+      } else {
+        settings = MonthSettings(); // default
+      }
+    }
+
+    if (settings.startDate != null) {
+      settings.startMode = 'custom';
+    }
+    if (settings.fixedDays != 30) {
+      isCustomDays = true;
+    }
   }
-  if (settings.fixedDays != 30) {
-    isCustomDays = true; // যদি fixedDays != 30 → Custom select hobe
-  }
-}
 
   DateTime getCalculatedStartDate() {
     final now = DateTime.now();
@@ -64,19 +79,14 @@ void initState() {
       case 'fixed':
         return start.add(Duration(days: settings.fixedDays - 1));
       case 'auto':
-        return prevMonthEndDate ?? start.add(Duration(days: settings.fixedDays - 1));
+        return start.add(Duration(days: settings.fixedDays - 1));
       default:
         return start.add(Duration(days: settings.fixedDays - 1));
     }
   }
 
   String getMonthNameFromRange(DateTime start, DateTime end) {
-    final startMonthDays =
-        DateTime(start.year, start.month + 1, 0).day - start.day + 1;
-    final endMonthDays = end.day;
-    return startMonthDays >= endMonthDays
-        ? _monthName(start.month)
-        : _monthName(end.month);
+    return _monthName(start.month);
   }
 
   String _monthName(int month) {
@@ -98,18 +108,15 @@ void initState() {
       setState(() {
         settings.startDate = picked;
         settings.startMode = 'custom';
-        prevMonthEndDate = picked.subtract(const Duration(days: 1));
       });
     }
   }
-
-  String formatDate(DateTime date) => "${date.day}/${date.month}/${date.year}";
 
   bool get isCustomDaysValid =>
       !isCustomDays || (settings.fixedDays >= 20 && settings.fixedDays <= 40);
 
   void _save() async {
-    if (!isCustomDaysValid) return; // prevent saving invalid
+    if (!isCustomDaysValid) return;
 
     final start = getCalculatedStartDate();
     final end = getCalculatedEndDate();
@@ -118,11 +125,9 @@ void initState() {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Confirm"),
+        title: const Text("Confirm Month Range"),
         content: Text(
-          "Month: $name\n"
-          "Start: ${formatDate(start)}\n"
-          "End: ${formatDate(end)}",
+          "Month: $name\nStart: ${formatDate(start)}\nEnd: ${formatDate(end)}",
         ),
         actions: [
           TextButton(
@@ -132,12 +137,19 @@ void initState() {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
+              // Hive এ save
               await AppState.addMonthRange(
                 start: start,
                 end: end,
                 monthName: name,
               );
-              Navigator.pop(context);
+              // saved settings return
+              Navigator.pop(context, MonthSettings(
+                startDate: start,
+                startMode: 'custom',
+                endMode: settings.endMode,
+                fixedDays: settings.fixedDays,
+              ));
             },
             child: const Text("OK"),
           ),
@@ -156,8 +168,7 @@ void initState() {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text("Start New Month",
-              style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text("Start New Month", style: TextStyle(fontWeight: FontWeight.bold)),
           Column(
             children: [
               RadioListTile(
@@ -189,8 +200,7 @@ void initState() {
             onTap: _pickDate,
           ),
           const Divider(),
-          const Text("End Of Month",
-              style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text("End Of Month", style: TextStyle(fontWeight: FontWeight.bold)),
           Column(
             children: [
               RadioListTile(
@@ -212,7 +222,6 @@ void initState() {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 8),
-                // Preset / Custom indent
                 Padding(
                   padding: const EdgeInsets.only(left: 16),
                   child: Column(

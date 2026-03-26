@@ -5,7 +5,7 @@ import '../../models/month_range_model.dart';
 
 class AppState {
   static late Box<TransactionData> _txBox;
-  static late Box<MonthRange> _monthBox; // ✅ fixed type
+  static late Box<MonthRange> _monthBox;
 
   static double totalExpense = 0.0;
   static double totalIncome = 0.0;
@@ -15,9 +15,14 @@ class AppState {
   static double savings = 0.0;
   static double balance = 0.0;
 
-  /// Init Hive boxes
+  /// 🔹 Initialize Hive boxes safely
   static Future<void> init() async {
-    _txBox = Hive.box<TransactionData>('transactions'); // already opened in main
+    if (!Hive.isBoxOpen('transactions')) {
+      _txBox = await Hive.openBox<TransactionData>('transactions');
+    } else {
+      _txBox = Hive.box<TransactionData>('transactions');
+    }
+
     await initMonths();
     recalculateFromBox();
   }
@@ -30,6 +35,7 @@ class AppState {
     }
   }
 
+  /// 🔹 Get currently active month range based on current date
   static MonthRange? getCurrentMonthRange() {
     final now = DateTime.now();
 
@@ -41,19 +47,27 @@ class AppState {
     return null;
   }
 
+  /// 🔹 Get remaining days of current month range
+  static int? getRemainingDays() {
+    final current = getCurrentMonthRange();
+    if (current == null) return null;
+
+    final now = DateTime.now();
+    final remaining = current.end.difference(now).inDays;
+    return remaining >= 0 ? remaining + 1 : 0; // include today
+  }
+
+  /// 🔹 Add new month range
   static Future<void> addMonthRange({
     required DateTime start,
     required DateTime end,
     required String monthName,
   }) async {
-    await _monthBox.add(MonthRange(
-      start: start,
-      end: end,
-      monthName: monthName,
-    ));
+    final monthRange = MonthRange(start: start, end: end, monthName: monthName);
+    await _monthBox.add(monthRange);
   }
 
-  // Transaction handling
+  /// 🔹 Add transaction
   static Future<void> addTransaction(TransactionData tx) async {
     if (tx.type == TransactionType.savingsWithdraw && tx.amount > savings) {
       throw Exception('Cannot withdraw more than available savings: $savings');
@@ -65,6 +79,7 @@ class AppState {
   static List<TransactionData> get transactions =>
       _txBox.values.toList().reversed.toList();
 
+  /// 🔹 Recalculate all totals
   static void recalculateFromBox() {
     totalExpense = 0;
     totalIncome = 0;
