@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import '../../../data/local/app_state.dart';
 class MonthSettings {
   DateTime? startDate;
   String startMode; // now | tomorrow | yesterday | custom
@@ -96,35 +96,46 @@ class _SetMonthScreenState extends State<SetMonthScreen> {
 
   String formatDate(DateTime date) => "${date.day}/${date.month}/${date.year}";
 
-  void _save() {
-    final start = getCalculatedStartDate();
-    final end = getCalculatedEndDate();
-    final name = getMonthNameFromRange(start, end);
+void _save() async {
+  final start = getCalculatedStartDate();
+  final end = getCalculatedEndDate();
+  final name = getMonthNameFromRange(start, end);
 
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Confirm Month Settings"),
-        content: Text(
-          "Month: $name\n"
-          "Start: ${formatDate(start)}\n"
-          "End: ${settings.endMode == 'infinite' ? 'Infinite' : formatDate(end)}",
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // ✅ Save to AppState or Hive
-              if (widget.onSave != null) widget.onSave!(settings);
-              Navigator.pop(context); // Close SetMonthScreen
-            },
-            child: const Text("OK"),
-          ),
-        ],
+  showDialog(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text("Confirm"),
+      content: Text(
+        "Month: $name\n"
+        "Start: ${formatDate(start)}\n"
+        "End: ${settings.endMode == 'infinite' ? 'Infinite' : formatDate(end)}",
       ),
-    );
-  }
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text("Cancel"),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            // 1️⃣ Close dialog
+            Navigator.pop(context);
+
+            // 2️⃣ Save to AppState / Hive
+            await AppState.addMonthRange(
+              start: start,
+              end: end,
+              monthName: name,
+            );
+
+            // 3️⃣ Close SetMonthScreen
+            Navigator.pop(context);
+          },
+          child: const Text("OK"),
+        ),
+      ],
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {

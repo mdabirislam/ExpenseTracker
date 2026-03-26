@@ -13,6 +13,23 @@ class AppState {
   static double savings = 0.0;
   static double balance = 0.0;
 
+static late Box _monthBox; // hive box for month ranges
+
+static Future<void> initMonths() async {
+  _monthBox = Hive.box('monthRanges');
+}
+
+static Future<void> addMonthRange({
+  required DateTime start,
+  required DateTime end,
+  required String monthName,
+}) async {
+  await _monthBox.add({
+    'start': start.toIso8601String(),
+    'end': end.toIso8601String(),
+    'monthName': monthName,
+  });
+}
   /// Init Hive box
   static Future<void> init() async {
     _txBox = Hive.box<TransactionData>('transactions');
