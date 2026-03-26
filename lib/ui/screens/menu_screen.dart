@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+// import 'after_click_screen/ExpenseDetailScreen.dart';
+import 'after_click_screen/SetMonthScreen.dart';
 
 class MenuScreen extends StatelessWidget {
   const MenuScreen({super.key});
@@ -18,9 +20,16 @@ class MenuScreen extends StatelessWidget {
             onTap: () {},
           ),
           _buildMenuTile(
-            icon: Icons.restart_alt,
-            title: 'Reset / Start New Year',
-            onTap: () {},
+          icon: Icons.calendar_month,
+          title: 'Set Month',
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const SetMonthScreen(),
+              ),
+            );
+          },
           ),
           _buildMenuTile(
             icon: Icons.save,
