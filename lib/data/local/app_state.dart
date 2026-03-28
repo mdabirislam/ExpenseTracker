@@ -33,7 +33,6 @@ class AppState {
   }
 
   // ================== MONTH RANGE ==================
-
   static Future<void> saveMonth(MonthRange range) async {
     final index = _monthBox.values.toList().indexWhere((m) =>
         m.monthRef.year == range.monthRef.year &&
@@ -61,29 +60,23 @@ class AppState {
     return getMonth(DateTime(now.year, now.month));
   }
 
-  static List<MonthRange> get allMonths =>
-      _monthBox.values.toList();
+  static List<MonthRange> get allMonths => _monthBox.values.toList();
 
   // ================== TRANSACTIONS ==================
-
   static Future<void> addTransaction(TransactionData tx) async {
-    if (tx.type == TransactionType.savingsWithdraw &&
-        tx.amount > savings) {
-      throw Exception(
-          'Cannot withdraw more than available savings: $savings');
+    if (tx.type == TransactionType.savingsWithdraw && tx.amount > savings) {
+      throw Exception('Cannot withdraw more than available savings: $savings');
     }
 
     await _txBox.add(tx);
 
-    // ✅ update global only (fast)
+    // ✅ update global totals fast
     _recalculateGlobal();
   }
 
-  static List<TransactionData> get transactions =>
-      _txBox.values.toList().reversed.toList();
+  static List<TransactionData> get transactions => _txBox.values.toList().reversed.toList();
 
   // ================== GLOBAL CALCULATION ==================
-
   static void _recalculateGlobal() {
     totalExpense = 0;
     totalIncome = 0;
@@ -98,77 +91,70 @@ class AppState {
 
       final amount = tx.amount;
 
-      if (tx.type == TransactionType.income) {
-        totalIncome += amount;
-      }
-
-      if (tx.type == TransactionType.expense) {
-        totalExpense += amount;
-      }
+      if (tx.type == TransactionType.income) totalIncome += amount;
+      if (tx.type == TransactionType.expense) totalExpense += amount;
 
       balance += amount * tx.type.balanceEffect;
       totalDebt += amount * tx.type.debtEffect;
       savings += amount * tx.type.savingsEffect;
       totalReceivable += amount * tx.type.receivableEffect;
+      totalLend += amount * (tx.type == TransactionType.lendGive || tx.type == TransactionType.lendReceive ? 1 : 0);
     }
 
     if (savings < 0) savings = 0;
     if (totalDebt < 0) totalDebt = 0;
     if (totalReceivable < 0) totalReceivable = 0;
+    if (totalLend < 0) totalLend = 0;
   }
 
   // ================== FILTERED TRANSACTIONS ==================
-
-  static List<TransactionData> _getTransactionsByRange(
-      DateTime start, DateTime end) {
+  static List<TransactionData> _getTransactionsByRange(DateTime start, DateTime end) {
     return _txBox.values.where((tx) {
       if (tx.isPlanned) return false;
-
-      return !tx.date.isBefore(start) &&
-             !tx.date.isAfter(end);
+      return !tx.date.isBefore(start) && !tx.date.isAfter(end);
     }).toList();
   }
 
-  // ================== MONTHLY CALCULATION (CORE) ==================
+// ================== MONTHLY CALCULATION ==================
+static MonthlySummary calculateByRange(DateTime startDate, DateTime endDate) {
+  double income = 0;
+  double expense = 0;
+  double debt = 0;
+  double savingsVal = 0;
+  double balanceVal = 0;
+  double lendVal = 0;
+  double borrowVal = 0; // <-- monthly borrow
 
-  static MonthlySummary calculateByRange(
-      DateTime startDate, DateTime endDate) {
+  final filtered = _getTransactionsByRange(startDate, endDate);
 
-    double income = 0;
-    double expense = 0;
-    double debt = 0;
-    double savingsVal = 0;
-    double balanceVal = 0;
+  for (final tx in filtered) {
+    final amount = tx.amount;
 
-    final filtered = _getTransactionsByRange(startDate, endDate);
+    if (tx.type == TransactionType.income) income += amount;
+    if (tx.type == TransactionType.expense) expense += amount;
 
-    for (final tx in filtered) {
-      final amount = tx.amount;
+    balanceVal += amount * tx.type.balanceEffect;
+    debt += amount * tx.type.debtEffect;
+    savingsVal += amount * tx.type.savingsEffect;
 
-      if (tx.type == TransactionType.income) {
-        income += amount;
-      }
+    // ✅ monthly lend
+    lendVal += amount * tx.type.receivableEffect;
 
-      if (tx.type == TransactionType.expense) {
-        expense += amount;
-      }
-
-      balanceVal += amount * tx.type.balanceEffect;
-      debt += amount * tx.type.debtEffect;
-      savingsVal += amount * tx.type.savingsEffect;
-    }
-
-    return MonthlySummary(
-      income: income,
-      expense: expense,
-      debt: debt < 0 ? 0 : debt,
-      savings: savingsVal < 0 ? 0 : savingsVal,
-      balance: balanceVal,
-    );
+    // ✅ monthly borrow
+    if (tx.type == TransactionType.debtBorrow) borrowVal += amount;
   }
 
+  return MonthlySummary(
+    income: income,
+    expense: expense,
+    debt: debt < 0 ? 0 : debt,
+    savings: savingsVal < 0 ? 0 : savingsVal,
+    balance: balanceVal,
+    lend: lendVal < 0 ? 0 : lendVal,
+    borrow: borrowVal < 0 ? 0 : borrowVal, // <-- return borrow
+  );
+}
   // ================== CURRENT MONTH ==================
-
   static MonthlySummary getCurrentMonthSummary() {
     final range = getCurrentMonthRange();
 
@@ -179,10 +165,11 @@ class AppState {
         debt: 0,
         savings: 0,
         balance: 0,
+        lend: 0,
+        borrow: 0,
       );
     }
 
-    return calculateByRange(
-        range.start, range.end);
+    return calculateByRange(range.start, range.end);
   }
 }
