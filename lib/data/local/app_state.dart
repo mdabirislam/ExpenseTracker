@@ -2,6 +2,7 @@ import 'package:hive/hive.dart';
 import '../../models/transaction_model.dart';
 import '../../models/transaction_type.dart';
 import '../../models/month_range_model.dart';
+import '../../models/monthly_summary_model.dart';
 
 class AppState {
   static late Box<TransactionData> _txBox;
@@ -19,11 +20,11 @@ class AppState {
   // ================== INIT ==================
   static Future<void> init() async {
     _txBox = Hive.box<TransactionData>('transactions');
-    await initMonths();
-    recalculateFromBox();
+    await _initMonths();
+    _recalculateGlobal();
   }
 
-  static Future<void> initMonths() async {
+  static Future<void> _initMonths() async {
     if (!Hive.isBoxOpen('monthRanges')) {
       _monthBox = await Hive.openBox<MonthRange>('monthRanges');
     } else {
@@ -33,22 +34,18 @@ class AppState {
 
   // ================== MONTH RANGE ==================
 
-  /// Save or update month (overwrite if exists)
   static Future<void> saveMonth(MonthRange range) async {
     final index = _monthBox.values.toList().indexWhere((m) =>
         m.monthRef.year == range.monthRef.year &&
         m.monthRef.month == range.monthRef.month);
 
     if (index != -1) {
-      // ✅ overwrite existing month
       await _monthBox.putAt(index, range);
     } else {
-      // ✅ add new month
       await _monthBox.add(range);
     }
   }
 
-  /// Get specific month by monthRef
   static MonthRange? getMonth(DateTime monthRef) {
     try {
       return _monthBox.values.firstWhere((m) =>
@@ -59,32 +56,35 @@ class AppState {
     }
   }
 
-  /// Get current month (based on today)
   static MonthRange? getCurrentMonthRange() {
     final now = DateTime.now();
     return getMonth(DateTime(now.year, now.month));
   }
 
-  /// All months
-  static List<MonthRange> get allMonths => _monthBox.values.toList();
+  static List<MonthRange> get allMonths =>
+      _monthBox.values.toList();
 
-  // ================== TRANSACTION ==================
+  // ================== TRANSACTIONS ==================
 
   static Future<void> addTransaction(TransactionData tx) async {
-    if (tx.type == TransactionType.savingsWithdraw && tx.amount > savings) {
-      throw Exception('Cannot withdraw more than available savings: $savings');
+    if (tx.type == TransactionType.savingsWithdraw &&
+        tx.amount > savings) {
+      throw Exception(
+          'Cannot withdraw more than available savings: $savings');
     }
 
     await _txBox.add(tx);
-    recalculateFromBox();
+
+    // ✅ update global only (fast)
+    _recalculateGlobal();
   }
 
   static List<TransactionData> get transactions =>
       _txBox.values.toList().reversed.toList();
 
-  // ================== CALCULATION ==================
+  // ================== GLOBAL CALCULATION ==================
 
-  static void recalculateFromBox() {
+  static void _recalculateGlobal() {
     totalExpense = 0;
     totalIncome = 0;
     totalDebt = 0;
@@ -98,8 +98,13 @@ class AppState {
 
       final amount = tx.amount;
 
-      if (tx.type == TransactionType.income) totalIncome += amount;
-      if (tx.type == TransactionType.expense) totalExpense += amount;
+      if (tx.type == TransactionType.income) {
+        totalIncome += amount;
+      }
+
+      if (tx.type == TransactionType.expense) {
+        totalExpense += amount;
+      }
 
       balance += amount * tx.type.balanceEffect;
       totalDebt += amount * tx.type.debtEffect;
@@ -110,5 +115,74 @@ class AppState {
     if (savings < 0) savings = 0;
     if (totalDebt < 0) totalDebt = 0;
     if (totalReceivable < 0) totalReceivable = 0;
+  }
+
+  // ================== FILTERED TRANSACTIONS ==================
+
+  static List<TransactionData> _getTransactionsByRange(
+      DateTime start, DateTime end) {
+    return _txBox.values.where((tx) {
+      if (tx.isPlanned) return false;
+
+      return !tx.date.isBefore(start) &&
+             !tx.date.isAfter(end);
+    }).toList();
+  }
+
+  // ================== MONTHLY CALCULATION (CORE) ==================
+
+  static MonthlySummary calculateByRange(
+      DateTime startDate, DateTime endDate) {
+
+    double income = 0;
+    double expense = 0;
+    double debt = 0;
+    double savingsVal = 0;
+    double balanceVal = 0;
+
+    final filtered = _getTransactionsByRange(startDate, endDate);
+
+    for (final tx in filtered) {
+      final amount = tx.amount;
+
+      if (tx.type == TransactionType.income) {
+        income += amount;
+      }
+
+      if (tx.type == TransactionType.expense) {
+        expense += amount;
+      }
+
+      balanceVal += amount * tx.type.balanceEffect;
+      debt += amount * tx.type.debtEffect;
+      savingsVal += amount * tx.type.savingsEffect;
+    }
+
+    return MonthlySummary(
+      income: income,
+      expense: expense,
+      debt: debt < 0 ? 0 : debt,
+      savings: savingsVal < 0 ? 0 : savingsVal,
+      balance: balanceVal,
+    );
+  }
+
+  // ================== CURRENT MONTH ==================
+
+  static MonthlySummary getCurrentMonthSummary() {
+    final range = getCurrentMonthRange();
+
+    if (range == null) {
+      return MonthlySummary(
+        income: 0,
+        expense: 0,
+        debt: 0,
+        savings: 0,
+        balance: 0,
+      );
+    }
+
+    return calculateByRange(
+        range.start, range.end);
   }
 }

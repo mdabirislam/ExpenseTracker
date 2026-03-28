@@ -58,7 +58,7 @@ void _navigate(BuildContext context, Widget screen) {
       valueListenable: _txBox.listenable(),
       builder: (context, Box<TransactionData> box, _) {
         // 🔹 Recalculate totals whenever transactions change
-        AppState.recalculateFromBox();
+        // AppState.recalculateFromBox();
 
         final transactions = box.values.toList().reversed.toList();
 
@@ -96,18 +96,26 @@ void _navigate(BuildContext context, Widget screen) {
   }
 
   // ───────── Balance Summary ─────────
-  Widget _buildBalanceSummary() {
-    return BalanceSummary(
-      balance: '৳ ${AppState.balance.toStringAsFixed(2)}',
-      statusText: AppState.balance >= 0
-          ? 'You are under budget'
-          : 'Over budget',
-      statusColor: AppState.balance >= 0 ? Colors.green : Colors.red,
-    );
-  }
+Widget _buildBalanceSummary() {
+  // final summary = AppState.getCurrentMonthSummary();
 
-  // ───────── Info Boards ─────────
+  return BalanceSummary(
+    // balance: '৳ ${summary.balance.toStringAsFixed(2)}',
+    balance: '৳ ${AppState.balance.toStringAsFixed(2)}',
+    statusText: AppState.balance >= 0
+    // statusText: summary.balance >= 0
+        ? 'You are under budget'
+        : 'Over budget',
+    statusColor:
+        AppState.balance >= 0 ? Colors.green : Colors.red,
+        // statusColor: summary.balance >= 0 ? Colors.green : Colors.red,
+  );
+}
+
+//___________ Info Boards ___________
 Widget _infoBoards(BuildContext context) {
+  final summary = AppState.getCurrentMonthSummary();
+
   return GridView.count(
     crossAxisCount: 2,
     shrinkWrap: true,
@@ -116,45 +124,41 @@ Widget _infoBoards(BuildContext context) {
     mainAxisSpacing: 12,
     childAspectRatio: 1.6,
     children: [
-      // Income Board
+
       InkWell(
-        onTap: () =>_navigate(context, IncomeDetailScreen()),
+        onTap: () => _navigate(context, IncomeDetailScreen()),
         child: InfoBoard(
           title: boardIncomeTitle,
-          value: '৳ ${AppState.totalIncome.toStringAsFixed(2)}',
-        ),
-      ),
-      
-      // Expense Board
-      InkWell(
-        onTap: () =>_navigate(context, ExpenseDetailScreen()),
-        child: InfoBoard(
-          title: boardExpenseTitle,
-          value: '৳ ${AppState.totalExpense.toStringAsFixed(2)}',
-        ),
-      ),
-      
-      // Debt Board
-      InkWell(
-        onTap: () =>_navigate(context, DebtDetailScreen()),
-        child: InfoBoard(
-          title: boardDebtTitle,
-          value: '৳ ${AppState.totalDebt.toStringAsFixed(2)}',
+          value: '৳ ${summary.income.toStringAsFixed(2)}',
         ),
       ),
 
-      // Savings Board
       InkWell(
-        onTap: () =>_navigate(context, SavingsDetailScreen()),
+        onTap: () => _navigate(context, ExpenseDetailScreen()),
+        child: InfoBoard(
+          title: boardExpenseTitle,
+          value: '৳ ${summary.expense.toStringAsFixed(2)}',
+        ),
+      ),
+
+      InkWell(
+        onTap: () => _navigate(context, DebtDetailScreen()),
+        child: InfoBoard(
+          title: boardDebtTitle,
+          value: '৳ ${summary.debt.toStringAsFixed(2)}',
+        ),
+      ),
+
+      InkWell(
+        onTap: () => _navigate(context, SavingsDetailScreen()),
         child: InfoBoard(
           title: boardSavingsTitle,
-          value: '৳ ${AppState.savings.toStringAsFixed(2)}',
+          value: '৳ ${summary.savings.toStringAsFixed(2)}',
         ),
       ),
     ],
   );
 }
-
   // ───────── Short History ─────────
   Widget _shortHistory(
     BuildContext context,
