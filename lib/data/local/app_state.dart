@@ -5,8 +5,9 @@ import '../../models/month_range_model.dart';
 
 class AppState {
   static late Box<TransactionData> _txBox;
-  static late Box<MonthRange> _monthBox; // ✅ fixed type
+  static late Box<MonthRange> _monthBox;
 
+  // ================== GLOBAL TOTALS ==================
   static double totalExpense = 0.0;
   static double totalIncome = 0.0;
   static double totalDebt = 0.0;
@@ -15,9 +16,9 @@ class AppState {
   static double savings = 0.0;
   static double balance = 0.0;
 
-  /// Init Hive boxes
+  // ================== INIT ==================
   static Future<void> init() async {
-    _txBox = Hive.box<TransactionData>('transactions'); // already opened in main
+    _txBox = Hive.box<TransactionData>('transactions');
     await initMonths();
     recalculateFromBox();
   }
@@ -30,40 +31,58 @@ class AppState {
     }
   }
 
+  // ================== MONTH RANGE ==================
+
+  /// Save or update month (overwrite if exists)
+  static Future<void> saveMonth(MonthRange range) async {
+    final index = _monthBox.values.toList().indexWhere((m) =>
+        m.monthRef.year == range.monthRef.year &&
+        m.monthRef.month == range.monthRef.month);
+
+    if (index != -1) {
+      // ✅ overwrite existing month
+      await _monthBox.putAt(index, range);
+    } else {
+      // ✅ add new month
+      await _monthBox.add(range);
+    }
+  }
+
+  /// Get specific month by monthRef
+  static MonthRange? getMonth(DateTime monthRef) {
+    try {
+      return _monthBox.values.firstWhere((m) =>
+          m.monthRef.year == monthRef.year &&
+          m.monthRef.month == monthRef.month);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Get current month (based on today)
   static MonthRange? getCurrentMonthRange() {
     final now = DateTime.now();
-
-    for (final item in _monthBox.values) {
-      if (!item.start.isAfter(now) && !item.end.isBefore(now)) {
-        return item;
-      }
-    }
-    return null;
+    return getMonth(DateTime(now.year, now.month));
   }
 
-  static Future<void> addMonthRange({
-    required DateTime start,
-    required DateTime end,
-    required String monthName,
-  }) async {
-    await _monthBox.add(MonthRange(
-      start: start,
-      end: end,
-      monthName: monthName,
-    ));
-  }
+  /// All months
+  static List<MonthRange> get allMonths => _monthBox.values.toList();
 
-  // Transaction handling
+  // ================== TRANSACTION ==================
+
   static Future<void> addTransaction(TransactionData tx) async {
     if (tx.type == TransactionType.savingsWithdraw && tx.amount > savings) {
       throw Exception('Cannot withdraw more than available savings: $savings');
     }
+
     await _txBox.add(tx);
     recalculateFromBox();
   }
 
   static List<TransactionData> get transactions =>
       _txBox.values.toList().reversed.toList();
+
+  // ================== CALCULATION ==================
 
   static void recalculateFromBox() {
     totalExpense = 0;

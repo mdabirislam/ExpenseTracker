@@ -1,117 +1,119 @@
 import 'package:flutter/material.dart';
-import 'after_click_screen/SetMonthScreen.dart';
 import '../../data/local/app_state.dart';
-import '../../utils/date_utils.dart';
+// import '../../models/month_range_model.dart';
+import 'after_click_screen/SetMonthScreen.dart';
+import 'package:intl/intl.dart';
 
-class MenuScreen extends StatelessWidget {
+class MenuScreen extends StatefulWidget {
   const MenuScreen({super.key});
 
   @override
+  State<MenuScreen> createState() => _MenuScreenState();
+}
+
+class _MenuScreenState extends State<MenuScreen> {
+
+  String formatMonth(DateTime d) {
+    return DateFormat('MMM yyyy').format(d);
+  }
+
+  String formatDate(DateTime d) {
+    return DateFormat('dd MMM yyyy').format(d);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final current = AppState.getCurrentMonthRange();
+    final allMonths = AppState.allMonths;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Menu / Settings')),
+      appBar: AppBar(
+        title: const Text('Menu / Settings (Test Mode)'),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _buildMenuTile(
-            icon: Icons.undo,
-            title: 'Undo Last Action',
-            onTap: () => debugPrint('Undo tapped'),
-          ),
-          _buildMenuTile(
-            icon: Icons.calendar_month,
-            title: 'Set Month',
-            onTap: () async {
-              // Ensure Hive box is ready
-              // await AppState.initMonths();
-//init on app start on main, not here
-              final existingRange = AppState.getCurrentMonthRange();
 
-              if (existingRange != null) {
-                // Popup if month range exists
-                showDialog(
-                  context: context,
-                  builder: (_) => AlertDialog(
-                    title: const Text("Month Range Exists"),
-                    content: Text(
-                      "Month: ${existingRange.monthName}\n"
-                      "Start: ${formatDate(existingRange.start)}\n"
-                      "End: ${formatDate(existingRange.end)}\n\n"
-                      "Do you want to edit it?"
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text("Cancel"),
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => SetMonthScreen(
-                                initialSettings: MonthSettings(
-                                  startDate: existingRange.start,
-                                  startMode: 'custom',
-                                  endMode: 'fixed',
-                                  fixedDays: existingRange.end.difference(existingRange.start).inDays + 1,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                        child: const Text("Edit"),
-                      ),
-                    ],
+          /// 🔥 Set Month Button
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.calendar_month),
+              title: const Text("Set Month"),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const SetMonthScreen(),
                   ),
                 );
-              } else {
-                // No data → open directly
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => SetMonthScreen()),
-                );
-              }
-            },
+
+                setState(() {}); // refresh after return
+              },
+            ),
           ),
-          _buildMenuTile(
-            icon: Icons.save,
-            title: 'Save / Delete Month Data',
-            onTap: () {},
+
+          const SizedBox(height: 10),
+
+          /// 🔥 Current Month Info
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.info),
+              title: const Text("Current Month"),
+              subtitle: current == null
+                  ? const Text("No month set")
+                  : Text(
+                      "${formatMonth(current.monthRef)}\n"
+                      "Start: ${formatDate(current.start)}\n"
+                      "End: ${formatDate(current.end)}",
+                    ),
+            ),
           ),
-          _buildMenuTile(
-            icon: Icons.dark_mode,
-            title: 'App Theme / Dark Mode',
-            onTap: () {},
+
+          const SizedBox(height: 20),
+
+          /// 🔥 All Saved Months (Debug View)
+          const Text(
+            "Saved Months (Debug)",
+            style: TextStyle(fontWeight: FontWeight.bold),
           ),
-          _buildMenuTile(
-            icon: Icons.language,
-            title: 'Language Switch',
-            onTap: () {},
-          ),
-          _buildMenuTile(
-            icon: Icons.exit_to_app,
-            title: 'Exit',
-            onTap: () {},
-          ),
+
+          const SizedBox(height: 10),
+
+          if (allMonths.isEmpty)
+            const Text("No data saved yet"),
+
+          ...allMonths.map((m) {
+            return Card(
+              child: ListTile(
+                leading: const Icon(Icons.calendar_today),
+                title: Text(formatMonth(m.monthRef)),
+                subtitle: Text(
+                  "Start: ${formatDate(m.start)}\n"
+                  "End: ${formatDate(m.end)}",
+                ),
+              ),
+            );
+          }),
+
+          const SizedBox(height: 30),
+
+          /// ⚠️ Safe Placeholder Buttons (No Logic)
+          _buildDisabledTile(Icons.undo, "Undo (Coming soon)"),
+          _buildDisabledTile(Icons.save, "Save/Delete (Coming soon)"),
+          _buildDisabledTile(Icons.dark_mode, "Theme (Coming soon)"),
+          _buildDisabledTile(Icons.language, "Language (Coming soon)"),
         ],
       ),
     );
   }
 
-  Widget _buildMenuTile({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildDisabledTile(IconData icon, String title) {
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 6),
       child: ListTile(
         leading: Icon(icon),
         title: Text(title),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: onTap,
+        trailing: const Icon(Icons.lock_outline),
       ),
     );
   }

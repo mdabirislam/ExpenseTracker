@@ -19,7 +19,7 @@ class MonthRangeAdapter extends TypeAdapter<MonthRange> {
     return MonthRange(
       start: fields[0] as DateTime,
       end: fields[1] as DateTime,
-      monthName: fields[2] as String,
+      monthRef: fields[2] as DateTime,
     );
   }
 
@@ -32,7 +32,7 @@ class MonthRangeAdapter extends TypeAdapter<MonthRange> {
       ..writeByte(1)
       ..write(obj.end)
       ..writeByte(2)
-      ..write(obj.monthName);
+      ..write(obj.monthRef);
   }
 
   @override

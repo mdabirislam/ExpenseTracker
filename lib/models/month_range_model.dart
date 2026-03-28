@@ -11,11 +11,11 @@ class MonthRange extends HiveObject {
   DateTime end;
 
   @HiveField(2)
-  String monthName;
+  DateTime monthRef; // 🔥 main identifier
 
   MonthRange({
     required this.start,
     required this.end,
-    required this.monthName,
+    required this.monthRef,
   });
 }
