@@ -6,7 +6,7 @@ import '../widgets/app_bar_widget.dart';
 import '../widgets/balance_summary.dart';
 import '../widgets/info_board.dart';
 import '../widgets/transaction_preview.dart';
-import '../widgets/charts/monthly_bar_chart.dart';
+import '../widgets/charts/monthly_line_chart.dart';
 import '../../models/transaction_model.dart';
 import '../placeholders/ui_vars.dart';
 import './after_click_screen/add_transaction_screen.dart';
@@ -18,6 +18,7 @@ import 'after_click_screen/DebtDetailScreen.dart';
 import 'after_click_screen/SavingsDetailScreen.dart';
 import 'after_click_screen/ExpenseDetailScreen.dart';
 
+//all widgets and data for home screen need to move to separate files, this file is too big and messy
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -74,7 +75,7 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 20),
                 _shortHistory(context, transactions),
                 const SizedBox(height: 20, width: double.infinity),
-                const MonthlyBarChart(),
+                const MonthlyLineChart(),
                 const SizedBox(height: 20),
                 const CategoryPieChart(),
               ],
