@@ -73,7 +73,7 @@ class HomeScreen extends StatelessWidget {
                 _infoBoards(context),
                 const SizedBox(height: 20),
                 _shortHistory(context, transactions),
-                const SizedBox(height: 20),
+                const SizedBox(height: 20, width: double.infinity),
                 const MonthlyBarChart(),
                 const SizedBox(height: 20),
                 const CategoryPieChart(),
@@ -109,6 +109,7 @@ class HomeScreen extends StatelessWidget {
   final currentIncome = summary.income;
   final previousBalance = AppState.balance - summary.balance;
   final lent = summary.lend;
+  final borrow = summary.borrow;
 
   List<Widget> headerTexts = [];
 
@@ -153,7 +154,7 @@ class HomeScreen extends StatelessWidget {
 
   Widget _financeRow(String label, double value, Color? color) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 0.5),
       child: Row(
         children: [
           Expanded(
@@ -178,8 +179,9 @@ class HomeScreen extends StatelessWidget {
   List<Widget> financialRows = [];
   if (currentIncome > 0) financialRows.add(_financeRow('Income', currentIncome, Colors.green[600]));
   if (previousBalance > 0) financialRows.add(_financeRow('Previous Balance', previousBalance, Colors.teal[600]));
+  if (borrow > 0) financialRows.add(_financeRow('Borrowed', borrow, Colors.red[600]));
   if (lent > 0) financialRows.add(_financeRow('Lent', lent, Colors.red[400]));
-
+  
   return Stack(
     clipBehavior: Clip.none,
     children: [
