@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../placeholders/fake_data.dart';
+import '../../../data/local/app_state.dart';
+import '../../../models/transaction_type.dart';
+import '../menu_screen.dart';
 
 class ExpenseDetailScreen extends StatefulWidget {
   const ExpenseDetailScreen({super.key});
@@ -9,205 +11,259 @@ class ExpenseDetailScreen extends StatefulWidget {
 }
 
 class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
+  String? selectedMonth;
+  bool isAllTime = false;
 
-  DateTime? fromDate;
-  DateTime? toDate;
+  List<DateTime> availableMonths = [];
 
-  // 📅 Date Picker
-  Future<void> _selectDate(bool isFrom) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-    );
+  @override
+  void initState() {
+    super.initState();
+    _prepareMonths();
+  }
 
-    if (picked != null) {
-      setState(() {
-        if (isFrom) {
-          fromDate = picked;
-        } else {
-          toDate = picked;
-        }
-      });
+  void _prepareMonths() {
+    final tx = AppState.transactions;
+
+    final monthsSet = <String>{};
+    for (var t in tx) {
+      monthsSet.add("${t.date.year}-${t.date.month}");
+    }
+
+    availableMonths = monthsSet.map((e) {
+      final parts = e.split('-');
+      return DateTime(int.parse(parts[0]), int.parse(parts[1]));
+    }).toList()
+      ..sort((a, b) => b.compareTo(a));
+
+    final now = DateTime.now();
+    final currentKey = "${now.year}-${now.month}";
+
+    if (monthsSet.contains(currentKey)) {
+      selectedMonth = currentKey;
+    } else if (availableMonths.isNotEmpty) {
+      final lastMonth = availableMonths.first;
+      selectedMonth = "${lastMonth.year}-${lastMonth.month}";
+    } else {
+      selectedMonth = null;
     }
   }
 
-  // 📅 Format
-  String formatDate(DateTime? date) {
-    if (date == null) return 'DD/MM/YY';
-    return "${date.day}/${date.month}/${date.year}";
+  bool get isCurrentMonthAvailable {
+    final now = DateTime.now();
+    return availableMonths.any((m) => m.year == now.year && m.month == now.month);
+  }
+
+  DateTimeRange getRange() {
+    final tx = AppState.transactions;
+
+    if (isAllTime) {
+      if (tx.isEmpty) {
+        final now = DateTime.now();
+        return DateTimeRange(start: now, end: now);
+      }
+      final sorted = [...tx]..sort((a, b) => a.date.compareTo(b.date));
+      return DateTimeRange(start: sorted.first.date, end: sorted.last.date);
+    }
+
+    if (selectedMonth == null) {
+      return DateTimeRange(start: DateTime.now(), end: DateTime.now());
+    }
+
+    final parts = selectedMonth!.split('-');
+    final y = int.parse(parts[0]);
+    final m = int.parse(parts[1]);
+
+    return DateTimeRange(start: DateTime(y, m, 1), end: DateTime(y, m + 1, 0));
+  }
+
+  List getFiltered() {
+    final range = getRange();
+    return AppState.transactions.where((tx) {
+      return !tx.date.isBefore(range.start) && !tx.date.isAfter(range.end);
+    }).toList();
+  }
+
+  Map<String, Map<String, dynamic>> groupByCategory(List txList) {
+    final Map<String, Map<String, dynamic>> data = {};
+    for (var tx in txList) {
+      if (tx.type != TransactionType.expense) continue;
+      final cat = tx.category ?? 'Others';
+      data.putIfAbsent(cat, () => {'count': 0, 'amount': 0.0});
+      data[cat]!['count'] += 1;
+      data[cat]!['amount'] += tx.amount;
+    }
+    return data;
+  }
+
+  String formatDate(DateTime d) => "${d.day}/${d.month}/${d.year}";
+
+  String formatMonth(DateTime m) {
+    const names = [
+      "Jan","Feb","Mar","Apr","May","Jun",
+      "Jul","Aug","Sep","Oct","Nov","Dec"
+    ];
+    return "${names[m.month - 1]} ${m.year}";
+  }
+
+  void _showMonthPicker() {
+    if (availableMonths.isEmpty) return;
+
+    showModalBottomSheet(
+      context: context,
+      builder: (_) {
+        return ListView.builder(
+          itemCount: availableMonths.length,
+          itemBuilder: (context, index) {
+            final m = availableMonths[index];
+            final key = "${m.year}-${m.month}";
+            return ListTile(
+              title: Text(formatMonth(m)),
+              onTap: () {
+                setState(() {
+                  selectedMonth = key;
+                  isAllTime = false;
+                });
+                Navigator.pop(context);
+              },
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final filtered = getFiltered();
+    final grouped = groupByCategory(filtered);
+    final categories = grouped.keys.toList();
+    final total = grouped.values.fold<double>(0, (sum, e) => sum + e['amount']);
+    final range = getRange();
+
+    String monthDisplay;
+    if (isAllTime) {
+      monthDisplay = "All Time";
+    } else if (selectedMonth != null) {
+      final parts = selectedMonth!.split('-');
+      final y = int.parse(parts[0]);
+      final m = int.parse(parts[1]);
+      monthDisplay = formatMonth(DateTime(y, m));
+    } else {
+      monthDisplay = "No Month";
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Expense Details'),
         centerTitle: true,
         backgroundColor: Colors.green,
-
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(120),
-          child: Container(
-            color: Colors.green,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              children: [
-                // From
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => _selectDate(true),
-                    child: Container(
-                      height: 80,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.white70),
-                        borderRadius: BorderRadius.circular(16),
-                        color: Colors.white24,
-                      ),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'From -\n${formatDate(fromDate)}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(width: 8),
-
-                // To
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => _selectDate(false),
-                    child: Container(
-                      height: 80,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.white70),
-                        borderRadius: BorderRadius.circular(16),
-                        color: Colors.white24,
-                      ),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'To -\n${formatDate(toDate)}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(width: 8),
-
-                // Buttons
-                Expanded(
-                  child: SizedBox(
-                    height: 80,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        SizedBox(
-                          height: 36,
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              print("From: $fromDate");
-                              print("To: $toDate");
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.green,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            child: const Text('Filter', style: TextStyle(fontSize: 13)),
-                          ),
-                        ),
-                        SizedBox(
-                          height: 36,
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                fromDate = null;
-                                toDate = null;
-                              });
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.green,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            child: const Text('All Time', style: TextStyle(fontSize: 12), textAlign: TextAlign.center,),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
-
       body: Column(
         children: [
-          // Top summary
+
+          // 🔹 FILTER BAR
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceVariant,
-              border: Border(
-                bottom: BorderSide(color: Colors.grey.withOpacity(0.3)),
+            padding: const EdgeInsets.all(10),
+            color: Colors.green,
+            child: Row(
+              children: [
+
+                // Month Button LEFT
+                if (availableMonths.isNotEmpty)
+                  TextButton(
+                    onPressed: _showMonthPicker,
+                    child: Text(
+                      monthDisplay,
+                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  )
+                else
+                  Text(
+                    monthDisplay,
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+
+                const Spacer(),
+
+                // Range CENTER
+                Text(
+                  "${formatDate(range.start)} - ${formatDate(range.end)}",
+                  style: const TextStyle(color: Colors.white),
+                ),
+
+                const Spacer(),
+
+                // All Time RIGHT
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      isAllTime = true;
+                    });
+                  },
+                  child: Text(
+                    'All Time',
+                    style: TextStyle(
+                      color: isAllTime ? Colors.yellow : Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ⚠️ Warning
+          if (!isCurrentMonthAvailable)
+            Container(
+              width: double.infinity,
+              color: Colors.orange,
+              padding: const EdgeInsets.all(10),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      "Please set current month!",
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const MenuScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text('Set'),
+                  )
+                ],
               ),
             ),
+
+          // Summary + Details
+          Container(
+            padding: const EdgeInsets.all(10),
             child: Row(
               children: [
                 Expanded(
-                  flex: 5,
                   child: Text(
-                    'Total Income : 000000',
+                    "Total Expense: ৳ ${total.toStringAsFixed(2)}",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {},
+                  child: Text(
+                    'Show Details',
                     style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                      color: Colors.green[700],
-                    ),
-                  ),
-                ),
-                Expanded(
-                  flex: 5,
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: InkWell(
-                      onTap: () {},
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        child: Text(
-                          'Show Details',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                      ),
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
@@ -215,53 +271,24 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
             ),
           ),
 
-          // Header
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-            color: Colors.grey[300],
-            child: Row(
-              children: const [
-                Expanded(flex: 5, child: Text('Category', style: TextStyle(fontWeight: FontWeight.bold))),
-                Expanded(flex: 2, child: Text('Count', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
-                Expanded(flex: 3, child: Text('Amount', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold))),
-              ],
-            ),
-          ),
-
-          const Divider(height: 1),
+          const Divider(),
 
           // List
           Expanded(
-            child: ListView.separated(
-              itemCount: dummyExpense.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                final item = dummyExpense[index];
-
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 5,
-                        child: Text(item['category'], maxLines: 2, overflow: TextOverflow.ellipsis),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: Center(child: Text(item['count'].toString())),
-                      ),
-                      Expanded(
-                        flex: 3,
-                        child: Align(
-                          alignment: Alignment.centerRight,
-                          child: Text('৳ ${(item['amount'] as num).toStringAsFixed(2)}'),
-                        ),
-                      ),
-                    ],
+            child: categories.isEmpty
+                ? const Center(child: Text('No Data'))
+                : ListView.builder(
+                    itemCount: categories.length,
+                    itemBuilder: (context, index) {
+                      final cat = categories[index];
+                      final item = grouped[cat]!;
+                      return ListTile(
+                        title: Text(cat),
+                        leading: Text(item['count'].toString()),
+                        trailing: Text("৳ ${(item['amount'] as double).toStringAsFixed(2)}"),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),
