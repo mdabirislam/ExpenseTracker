@@ -12,147 +12,95 @@ class ExpenseDetailScreen extends StatefulWidget {
 }
 
 class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
-  String? selectedMonth;
   bool isAllTime = false;
 
-  List<DateTime> availableMonths = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _prepareMonths();
-  }
-
-  void _prepareMonths() {
-    final tx = AppState.transactions;
-
-    final monthsSet = <String>{};
-    for (var t in tx) {
-      monthsSet.add("${t.date.year}-${t.date.month}");
-    }
-
-    availableMonths = monthsSet.map((e) {
-      final parts = e.split('-');
-      return DateTime(int.parse(parts[0]), int.parse(parts[1]));
-    }).toList()
-      ..sort((a, b) => b.compareTo(a));
-
-    final now = DateTime.now();
-    final currentKey = "${now.year}-${now.month}";
-
-    if (monthsSet.contains(currentKey)) {
-      selectedMonth = currentKey;
-    } else if (availableMonths.isNotEmpty) {
-      final lastMonth = availableMonths.first;
-      selectedMonth = "${lastMonth.year}-${lastMonth.month}";
-    } else {
-      selectedMonth = null;
-    }
-  }
-
-  bool get isCurrentMonthAvailable {
-    final now = DateTime.now();
-    return availableMonths.any((m) => m.year == now.year && m.month == now.month);
-  }
-
+  // ================= RANGE =================
   DateTimeRange getRange() {
     final tx = AppState.transactions;
 
+    // 🔥 ALL TIME
     if (isAllTime) {
       if (tx.isEmpty) {
         final now = DateTime.now();
         return DateTimeRange(start: now, end: now);
       }
+
       final sorted = [...tx]..sort((a, b) => a.date.compareTo(b.date));
-      return DateTimeRange(start: sorted.first.date, end: sorted.last.date);
+
+      return DateTimeRange(
+        start: sorted.first.date,
+        end: sorted.last.date,
+      );
     }
 
-    if (selectedMonth == null) {
-      return DateTimeRange(start: DateTime.now(), end: DateTime.now());
+    // 🔥 CURRENT MONTH FROM APPSTATE (IMPORTANT CHANGE)
+    final monthRange = AppState.getCurrentMonthRange();
+
+    if (monthRange == null) {
+      final now = DateTime.now();
+      return DateTimeRange(start: now, end: now);
     }
 
-    final parts = selectedMonth!.split('-');
-    final y = int.parse(parts[0]);
-    final m = int.parse(parts[1]);
-
-    return DateTimeRange(start: DateTime(y, m, 1), end: DateTime(y, m + 1, 0));
-  }
-
-  List getFiltered() {
-    final range = getRange();
-    return AppState.transactions.where((tx) {
-      return !tx.date.isBefore(range.start) && !tx.date.isAfter(range.end);
-    }).toList();
-  }
-
-  Map<String, Map<String, dynamic>> groupByCategory(List txList) {
-    final Map<String, Map<String, dynamic>> data = {};
-    for (var tx in txList) {
-      if (tx.type != TransactionType.expense) continue;
-      final cat = tx.category ?? 'Others';
-      data.putIfAbsent(cat, () => {'count': 0, 'amount': 0.0});
-      data[cat]!['count'] += 1;
-      data[cat]!['amount'] += tx.amount;
-    }
-    return data;
-  }
-
-  String formatDate(DateTime d) => "${d.day}/${d.month}/${d.year}";
-
-  String formatMonth(DateTime m) {
-    const names = [
-      "Jan","Feb","Mar","Apr","May","Jun",
-      "Jul","Aug","Sep","Oct","Nov","Dec"
-    ];
-    return "${names[m.month - 1]} ${m.year}";
-  }
-
-  void _showMonthPicker() {
-    if (availableMonths.isEmpty) return;
-
-    showModalBottomSheet(
-      context: context,
-      builder: (_) {
-        return ListView.builder(
-          itemCount: availableMonths.length,
-          itemBuilder: (context, index) {
-            final m = availableMonths[index];
-            final key = "${m.year}-${m.month}";
-            return ListTile(
-              title: Text(formatMonth(m)),
-              onTap: () {
-                setState(() {
-                  selectedMonth = key;
-                  isAllTime = false;
-                });
-                Navigator.pop(context);
-              },
-            );
-          },
-        );
-      },
+    return DateTimeRange(
+      start: monthRange.start,
+      end: monthRange.end,
     );
   }
 
+  // ================= FILTER =================
+  List getFiltered() {
+    final range = getRange();
+
+    return AppState.transactions.where((tx) {
+      return !tx.date.isBefore(range.start) &&
+          !tx.date.isAfter(range.end);
+    }).toList();
+  }
+
+  // ================= GROUP =================
+  Map<String, Map<String, num>> groupByCategory(List txList) {
+    final Map<String, Map<String, num>> data = {};
+
+    for (var tx in txList) {
+      if (tx.type != TransactionType.expense) continue;
+
+      final cat = tx.category ?? 'Others';
+
+      data.putIfAbsent(cat, () => {'count': 0, 'amount': 0});
+
+      data[cat]!['count'] = (data[cat]!['count'] ?? 0) + 1;
+      data[cat]!['amount'] = (data[cat]!['amount'] ?? 0) + tx.amount;
+    }
+
+    return data;
+  }
+
+  // ================= UI HELPERS =================
+  String formatDate(DateTime d) => "${d.day}/${d.month}/${d.year}";
+
+  String get monthDisplay {
+    if (isAllTime) return "All Time";
+
+    final range = AppState.getCurrentMonthRange();
+
+    if (range == null) return "Not Set";
+
+    return "${range.monthRef.month}/${range.monthRef.year}";
+  }
+
+  // ================= BUILD =================
   @override
   Widget build(BuildContext context) {
     final filtered = getFiltered();
     final grouped = groupByCategory(filtered);
     final categories = grouped.keys.toList();
-    final total = grouped.values.fold<double>(0, (sum, e) => sum + e['amount']);
-    final range = getRange();
 
-    String monthDisplay;
-    if (isAllTime) {
-      monthDisplay = "All Time";
-    } else if (selectedMonth != null) {
-      final parts = selectedMonth!.split('-');
-      final y = int.parse(parts[0]);
-      final m = int.parse(parts[1]);
-      monthDisplay = formatMonth(DateTime(y, m));
-    } else {
-      monthDisplay = "No Month";
-    }
+    final total = grouped.values.fold<double>(
+      0,
+      (sum, e) => sum + (e['amount'] ?? 0).toDouble(),
+    );
+
+    final range = getRange();
 
     return Scaffold(
       appBar: AppBar(
@@ -160,34 +108,24 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
         centerTitle: true,
         backgroundColor: Colors.green,
       ),
+
       body: Column(
         children: [
 
-          // 🔹 FILTER BAR
+          // ================= FILTER BAR =================
           Container(
             padding: const EdgeInsets.all(10),
             color: Colors.green,
             child: Row(
               children: [
 
-                // Month Button LEFT
-                if (availableMonths.isNotEmpty)
-                  TextButton(
-                    onPressed: _showMonthPicker,
-                    child: Text(
-                      monthDisplay,
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-                  )
-                else
-                  Text(
-                    monthDisplay,
-                    style: const TextStyle(color: Colors.white, fontSize: 16),
-                  ),
+                Text(
+                  monthDisplay,
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                ),
 
                 const Spacer(),
 
-                // Range CENTER
                 Text(
                   "${formatDate(range.start)} - ${formatDate(range.end)}",
                   style: const TextStyle(color: Colors.white),
@@ -195,7 +133,6 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
 
                 const Spacer(),
 
-                // All Time RIGHT
                 GestureDetector(
                   onTap: () {
                     setState(() {
@@ -215,8 +152,8 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
             ),
           ),
 
-          // ⚠️ Warning
-          if (!isCurrentMonthAvailable)
+          // ================= WARNING =================
+          if (AppState.getCurrentMonthRange() == null)
             Container(
               width: double.infinity,
               color: Colors.orange,
@@ -244,7 +181,7 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
               ),
             ),
 
-          // Summary + Details
+          // ================= TOTAL =================
           Container(
             padding: const EdgeInsets.all(10),
             child: Row(
@@ -258,23 +195,13 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                     ),
                   ),
                 ),
-                GestureDetector(
-                  onTap: () {},
-                  child: Text(
-                    'Show Details',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
 
           const Divider(),
 
-          // List
+          // ================= LIST =================
           Expanded(
             child: categories.isEmpty
                 ? const Center(child: Text('No Data'))
@@ -283,15 +210,21 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                     itemBuilder: (context, index) {
                       final cat = categories[index];
                       final item = grouped[cat]!;
+
                       return ListTile(
                         title: Text(cat),
-                        leading: Text(item['count'].toString()),
-                        trailing: Text("৳ ${(item['amount'] as double).toStringAsFixed(2)}"),
+                        leading: Text((item['count'] ?? 0).toString()),
+                        trailing: Text(
+                          "৳ ${(item['amount'] ?? 0).toStringAsFixed(2)}",
+                        ),
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => CategoryExpenseScreen(category: cat, range: getRange()),
+                              builder: (_) => CategoryExpenseScreen(
+                                category: cat,
+                                range: getRange(),
+                              ),
                             ),
                           );
                         },

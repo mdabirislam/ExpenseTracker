@@ -23,8 +23,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   TransactionType _selectedType = TransactionType.expense;
   String? _selectedCategory;
+  DateTime _selectedDate = DateTime.now();
 
-  DateTime _selectedDate = DateTime.now(); // date select hobe
+  bool _isLocked = false;
 
   @override
   void initState() {
@@ -51,6 +52,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     });
   }
 
+  void _toggleLock() {
+    setState(() {
+      _isLocked = !_isLocked;
+    });
+  }
+
   Future<void> _pickDate() async {
     final date = await showDatePicker(
       context: context,
@@ -62,6 +69,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     if (date != null) {
       setState(() {
         _selectedDate = date;
+
+        // user manually changed -> unlock
+        if (_isLocked) _isLocked = false;
       });
     }
   }
@@ -93,7 +103,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       return;
     }
 
-    // current time
     final now = DateTime.now();
 
     final finalDateTime = DateTime(
@@ -124,7 +133,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       const SnackBar(content: Text('Transaction saved')),
     );
 
-    _resetForm();
+    // 🔥 LOCK LOGIC
+    if (!_isLocked) {
+      _resetForm();
+    } else {
+      _amountController.clear();
+      _sourceController.clear();
+      _noteController.clear();
+    }
   }
 
   @override
@@ -136,12 +152,28 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            /// 🔘 LOCK / RESET CHIP
+            Align(
+              alignment: Alignment.centerRight,
+              child: ActionChip(
+                avatar: Icon(
+                  _isLocked ? Icons.lock : Icons.lock_open,
+                  size: 18,
+                ),
+                label: Text(_isLocked ? "Locked" : "Lock"),
+                onPressed: _toggleLock,
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
             TransactionTypeSelector(
               selectedType: _selectedType,
               onSelected: (type) {
                 setState(() {
                   _selectedType = type;
                   _selectedCategory = null;
+                  _isLocked = false; // change করলে unlock
                 });
               },
             ),
@@ -158,27 +190,38 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
             const SizedBox(height: 16),
 
-            CategoryDropdownField(
-              key: ValueKey(_selectedCategory),
-              type: _selectedType,
-              initialValue: _selectedCategory,
-              onSelected: (cat) {
-                setState(() {
-                  _selectedCategory = cat;
-                });
-              },
+            /// CATEGORY
+            InputDecorator(
+              decoration: InputDecoration(
+                labelText: 'Category',
+                border: const OutlineInputBorder(),
+                prefixIcon: _isLocked ? const Icon(Icons.lock) : null,
+              ),
+              child: CategoryDropdownField(
+                key: ValueKey(_selectedCategory),
+                type: _selectedType,
+                initialValue: _selectedCategory,
+                onSelected: (cat) {
+                  setState(() {
+                    _selectedCategory = cat;
+
+                    // user change করলে unlock
+                    if (_isLocked) _isLocked = false;
+                  });
+                },
+              ),
             ),
 
             const SizedBox(height: 16),
 
-            // DATE FIELD
+            /// DATE
             InkWell(
               onTap: _pickDate,
               child: InputDecorator(
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Date',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.calendar_today),
+                  border: const OutlineInputBorder(),
+                  prefixIcon: _isLocked ? const Icon(Icons.lock) : const Icon(Icons.calendar_today),
                 ),
                 child: Text(
                   "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
