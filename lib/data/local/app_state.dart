@@ -44,21 +44,34 @@ class AppState {
       await _monthBox.add(range);
     }
   }
+static MonthRange? getCurrentMonthRange() {
+  final now = DateTime.now();
 
-  static MonthRange? getMonth(DateTime monthRef) {
-    try {
-      return _monthBox.values.firstWhere((m) =>
-          m.monthRef.year == monthRef.year &&
-          m.monthRef.month == monthRef.month);
-    } catch (_) {
-      return null;
+  try {
+    return _monthBox.values.firstWhere((m) =>
+        !now.isBefore(m.start) && !now.isAfter(m.end));
+  } catch (_) {
+    return null;
+  }
+}
+static MonthRange? getMonth(DateTime input) {
+  // 🔥 1. Check by date range (MOST IMPORTANT)
+  for (final m in _monthBox.values) {
+    if (!input.isBefore(m.start) && !input.isAfter(m.end)) {
+      return m;
     }
   }
 
-  static MonthRange? getCurrentMonthRange() {
-    final now = DateTime.now();
-    return getMonth(DateTime(now.year, now.month));
+  // 🔥 2. fallback: monthRef match
+  for (final m in _monthBox.values) {
+    if (m.monthRef.year == input.year &&
+        m.monthRef.month == input.month) {
+      return m;
+    }
   }
+
+  return null;
+}
 
   static List<MonthRange> get allMonths => _monthBox.values.toList();
 

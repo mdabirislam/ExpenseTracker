@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../data/local/app_state.dart';
 import '../../../models/transaction_type.dart';
 import '../menu_screen.dart';
+import 'ExpenseCategoryDetailScreen.dart';
 
 class ExpenseDetailScreen extends StatefulWidget {
   const ExpenseDetailScreen({super.key});
@@ -286,6 +287,14 @@ class _ExpenseDetailScreenState extends State<ExpenseDetailScreen> {
                         title: Text(cat),
                         leading: Text(item['count'].toString()),
                         trailing: Text("৳ ${(item['amount'] as double).toStringAsFixed(2)}"),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => CategoryExpenseScreen(category: cat, range: getRange()),
+                            ),
+                          );
+                        },
                       );
                     },
                   ),
