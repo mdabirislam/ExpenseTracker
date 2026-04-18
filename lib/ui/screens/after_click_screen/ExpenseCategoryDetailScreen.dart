@@ -108,7 +108,7 @@ class CategoryExpenseScreen extends StatelessWidget {
                             Expanded(
                               flex: 4,
                               child: Text(
-                                tx.source ?? 'Unknown',
+                                tx.source,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),

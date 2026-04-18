@@ -44,17 +44,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     super.dispose();
   }
 
-  void _resetForm() {
-    _amountController.clear();
-    _sourceController.clear();
-    _noteController.clear();
-
-    setState(() {
-      _selectedCategory = null;
-      _selectedDate = DateTime.now();
-    });
-  }
-
   Future<void> _pickDate() async {
     final date = await showDatePicker(
       context: context,
