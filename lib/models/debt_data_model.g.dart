@@ -20,15 +20,16 @@ class DebtDataAdapter extends TypeAdapter<DebtData> {
       id: fields[0] as String,
       name: fields[1] as String,
       totalDebt: fields[2] as double,
-      createdAt: fields[3] as DateTime?,
-      note: fields[4] as String?,
+      totalPaid: fields[3] as double,
+      createdAt: fields[4] as DateTime?,
+      note: fields[5] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, DebtData obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -36,8 +37,10 @@ class DebtDataAdapter extends TypeAdapter<DebtData> {
       ..writeByte(2)
       ..write(obj.totalDebt)
       ..writeByte(3)
-      ..write(obj.createdAt)
+      ..write(obj.totalPaid)
       ..writeByte(4)
+      ..write(obj.createdAt)
+      ..writeByte(5)
       ..write(obj.note);
   }
 
