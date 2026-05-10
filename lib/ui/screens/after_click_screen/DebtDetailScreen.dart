@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
-import '../../../models/debt_data_model.dart';
+
 import '../../../models/transaction_model.dart';
 import '../../../models/transaction_type.dart';
 import '../../../data/local/app_state.dart';
@@ -14,24 +13,16 @@ class DebtDetailScreen extends StatefulWidget {
 
 class _DebtDetailScreenState extends State<DebtDetailScreen> {
 
-  late Box<DebtData> debtBox;
-
-  @override
-  void initState() {
-    super.initState();
-    debtBox = Hive.box<DebtData>('debts');
-  }
-
   String generateId() {
     return "${DateTime.now().millisecondsSinceEpoch}_${DateTime.now().microsecondsSinceEpoch}";
   }
 
-  List<DebtData> get debts => debtBox.values.toList();
-
   // ================= PAY DIALOG =================
-  void showPayDialog(DebtData debt) {
+
+  void showPayDialog(TransactionData debtTx) {
+
     final controller = TextEditingController(
-      text: debt.remaining.toStringAsFixed(2),
+      text: debtTx.amount.toStringAsFixed(2),
     );
 
     DateTime selectedDate = DateTime.now();
@@ -41,43 +32,55 @@ class _DebtDetailScreenState extends State<DebtDetailScreen> {
       builder: (_) {
         return StatefulBuilder(
           builder: (context, setLocalState) {
+
             return AlertDialog(
-              title: Text("Pay ${debt.name}"),
+              title: Text("Pay ${debtTx.source}"),
+
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
 
+                  // Amount
                   TextField(
                     controller: controller,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: "Amount"),
+                    decoration: const InputDecoration(
+                      labelText: "Amount",
+                    ),
                   ),
 
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 14),
 
+                  // Date Picker
                   Row(
                     children: [
+
                       Expanded(
                         child: Text(
-                          "${selectedDate.day}/${selectedDate.month}/${selectedDate.year} "
-                          "${selectedDate.hour}:${selectedDate.minute}",
+                          "${selectedDate.day}/${selectedDate.month}/${selectedDate.year}"
+                          " ${selectedDate.hour}:${selectedDate.minute}",
                         ),
                       ),
+
                       IconButton(
                         icon: const Icon(Icons.calendar_today),
+
                         onPressed: () async {
+
                           final date = await showDatePicker(
                             context: context,
                             initialDate: selectedDate,
-                            firstDate: DateTime(2000),
+                            firstDate: DateTime(2020),
                             lastDate: DateTime.now(),
                           );
+
                           if (date == null) return;
 
                           final time = await showTimePicker(
                             context: context,
                             initialTime: TimeOfDay.fromDateTime(selectedDate),
                           );
+
                           if (time == null) return;
 
                           setLocalState(() {
@@ -90,24 +93,63 @@ class _DebtDetailScreenState extends State<DebtDetailScreen> {
                             );
                           });
                         },
-                      )
+                      ),
                     ],
                   ),
                 ],
               ),
 
               actions: [
+
                 TextButton(
-                  onPressed: () async {
-                    final pay = double.tryParse(controller.text) ?? 0;
+                  onPressed: () {
                     Navigator.pop(context);
+                  },
+                  child: const Text("Cancel"),
+                ),
+
+                ElevatedButton(
+                  onPressed: () async {
+
+                    final pay =
+                        double.tryParse(controller.text.trim()) ?? 0;
 
                     if (pay <= 0) return;
 
-                    await handlePayment(debt, pay, selectedDate);
+                    // ================= CREATE REPAY TRANSACTION =================
+
+                    final repayType =
+                        debtTx.type == TransactionType.creditBuy
+                            ? TransactionType.creditPay
+                            : TransactionType.debtRepay;
+
+                    final repayTx = TransactionData(
+                      id: generateId(),
+
+                      type: repayType,
+
+                      amount: pay,
+
+                      category: debtTx.category,
+
+                      source: debtTx.source,
+
+                      note:
+                          "Paid for: ${debtTx.id}",
+
+                      date: selectedDate,
+                    );
+
+                    await AppState.addTransaction(repayTx);
+
+                    if (!mounted) return;
+
+                    Navigator.pop(context);
+
+                    setState(() {});
                   },
-                  child: const Text("OK"),
-                )
+                  child: const Text("Pay"),
+                ),
               ],
             );
           },
@@ -116,93 +158,31 @@ class _DebtDetailScreenState extends State<DebtDetailScreen> {
     );
   }
 
-  // ================= PAYMENT LOGIC =================
-  Future<void> handlePayment(
-    DebtData debt,
-    double pay,
-    DateTime date,
-  ) async {
-
-    final remaining = debt.remaining;
-
-    // 🔥 ADD EXPENSE
-    await AppState.addTransaction(TransactionData(
-      id: generateId(),
-      type: TransactionType.expense,
-      amount: pay,
-      category: "Debt Paid",
-      source: debt.name,
-      note: "Debt payment",
-      date: date,
-    ));
-
-    // ================= LESS =================
-    if (pay < remaining) {
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text("Partial Payment"),
-          content: Text("Remaining: ${remaining - pay}\nKeep or Forgive?"),
-          actions: [
-
-            // KEEP
-            TextButton(
-              onPressed: () async {
-                Navigator.pop(context);
-
-                debt.totalPaid += pay;
-                await debt.save();
-
-                setState(() {});
-              },
-              child: const Text("Keep"),
-            ),
-
-            // FORGIVE
-            TextButton(
-              onPressed: () async {
-                Navigator.pop(context);
-
-                debt.totalPaid = debt.totalDebt;
-                debt.note = (debt.note ?? "") +
-                    "\nForgiven ${remaining - pay}";
-
-                await debt.save();
-
-                setState(() {});
-              },
-              child: const Text("Forgive"),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
-    // ================= FULL / EXTRA =================
-    else {
-      debt.totalPaid = debt.totalDebt;
-
-      if (pay > remaining) {
-        final extra = pay - remaining;
-        debt.note = (debt.note ?? "") +
-            "\nExtra Paid: $extra";
-      }
-
-      await debt.save();
-    }
-
-    setState(() {});
-  }
-
   // ================= BUILD =================
+
   @override
   Widget build(BuildContext context) {
 
-    final unpaid = debts.where((d) => !d.isPaid).toList();
-    final paid = debts.where((d) => d.isPaid).toList();
+    final allTransactions = AppState.transactions;
+
+    // 🔴 TO PAY
+    final debtToPay = allTransactions.where((tx) {
+
+      return tx.type == TransactionType.debtBorrow ||
+          tx.type == TransactionType.creditBuy;
+
+    }).toList();
+
+    // 🟢 PAID
+    final debtPaid = allTransactions.where((tx) {
+
+      return tx.type == TransactionType.debtRepay ||
+          tx.type == TransactionType.creditPay;
+
+    }).toList();
 
     return Scaffold(
+
       appBar: AppBar(
         title: const Text("Debt Details"),
         backgroundColor: Colors.red,
@@ -211,35 +191,131 @@ class _DebtDetailScreenState extends State<DebtDetailScreen> {
       body: ListView(
         children: [
 
-          // 🔴 UNPAID
+          // ================= TO PAY =================
+
           const Padding(
-            padding: EdgeInsets.all(8),
-            child: Text("Unpaid / Remaining",
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            padding: EdgeInsets.all(10),
+            child: Text(
+              "Debt To Pay",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
           ),
 
-          ...unpaid.map((d) => ListTile(
-                title: Text(d.name),
-                subtitle: Text("Remaining: ৳ ${d.remaining.toStringAsFixed(2)}"),
+          if (debtToPay.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: Text("No debt found"),
+            ),
+
+          ...debtToPay.map((tx) {
+
+            return Card(
+              margin: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 5,
+              ),
+
+              child: ListTile(
+
+                title: Text(tx.source),
+
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+
+                    Text(
+                      "৳ ${tx.amount.toStringAsFixed(2)}",
+                    ),
+
+                    Text(
+                      tx.type.label,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+
+                    if (tx.note != null &&
+                        tx.note!.trim().isNotEmpty)
+                      Text(
+                        tx.note!,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                  ],
+                ),
+
                 trailing: ElevatedButton(
-                  onPressed: () => showPayDialog(d),
+                  onPressed: () => showPayDialog(tx),
                   child: const Text("Pay"),
                 ),
-              )),
+              ),
+            );
+          }),
 
-          const Divider(),
+          const SizedBox(height: 20),
 
-          // 🟢 PAID
+          // ================= PAID =================
+
           const Padding(
-            padding: EdgeInsets.all(8),
-            child: Text("Paid",
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            padding: EdgeInsets.all(10),
+            child: Text(
+              "Debt Paid",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
           ),
 
-          ...paid.map((d) => ListTile(
-                title: Text(d.name),
-                subtitle: const Text("Paid"),
-              )),
+          if (debtPaid.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: Text("No payment history"),
+            ),
+
+          ...debtPaid.map((tx) {
+
+            return Card(
+              margin: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 5,
+              ),
+
+              child: ListTile(
+
+                leading: const Icon(
+                  Icons.check_circle,
+                  color: Colors.green,
+                ),
+
+                title: Text(tx.source),
+
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+
+                    Text(
+                      "৳ ${tx.amount.toStringAsFixed(2)}",
+                    ),
+
+                    Text(
+                      tx.type.label,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+
+                    if (tx.note != null &&
+                        tx.note!.trim().isNotEmpty)
+                      Text(
+                        tx.note!,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          }),
+
+          const SizedBox(height: 20),
         ],
       ),
     );

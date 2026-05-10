@@ -1,3 +1,6 @@
+//__________for automatic making of ....g.dart_______
+// flutter packages pub run build_runner build --delete-conflicting-outputs
+
 import 'package:hive/hive.dart';
 
 part 'month_range_model.g.dart';
