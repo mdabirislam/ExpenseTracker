@@ -1,0 +1,12 @@
+First connect local changes to git with command -->
+git add .
+Then commit what changes happen or with whatever-->
+git commit -m "comment"
+Then push to git repository-->
+git push
+
+# Summary
+__________
+git add .
+git commit -m "___"
+git push
