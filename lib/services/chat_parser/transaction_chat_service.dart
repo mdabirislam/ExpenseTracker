@@ -19,8 +19,8 @@ class TransactionChatService {
     final blocks =
         TransactionBlockSplitter.split(input);
 
-List<ParsedTransaction> transactions = [];
-List<ValidationError> errors = [];
+    List<ParsedTransaction> transactions = [];
+    List<ValidationError> errors = [];
 
     for (int i = 0; i < blocks.length; i++) {
 
@@ -30,6 +30,10 @@ List<ValidationError> errors = [];
       transactions.addAll(result.transactions);
       errors.addAll(result.errors);
     }
+
+    // SAFETY FILTER
+    transactions.removeWhere((t) =>
+        t.source.trim().isEmpty || t.amount <= 0);
 
     return ParserResult(
       transactions: transactions,

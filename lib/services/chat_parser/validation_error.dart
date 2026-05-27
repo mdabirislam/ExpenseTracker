@@ -1,4 +1,5 @@
 class ValidationError {
+
   final int index;
   final String message;
 
