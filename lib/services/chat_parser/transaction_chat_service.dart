@@ -1,38 +1,39 @@
-import '../../models/parser_result.dart';
-import 'transaction_lexer.dart';
+import 'chat_input_validator.dart';
+import 'transaction_block_splitter.dart';
 import 'transaction_parser.dart';
-import 'validation_engine.dart';
-import 'syntax_validator.dart';
+import 'parser_result.dart';
+import '../../models/parsed_transaction.dart';
+import 'validation_error.dart';
 
 class TransactionChatService {
 
   static ParserResult process(String input) {
 
-    if (SyntaxValidator.isRandomMessage(input)) {
+    final validationErrors =
+        ChatInputValidator.validate(input);
 
-      return ParserResult(
-        drafts: [],
-        errors: [],
-      );
+    if (validationErrors.isNotEmpty) {
+      return ParserResult.error(validationErrors);
     }
 
-    final lines =
-        TransactionLexer.tokenize(input);
+    final blocks =
+        TransactionBlockSplitter.split(input);
 
-    final parsed =
-        TransactionParser.parse(lines);
+List<ParsedTransaction> transactions = [];
+List<ValidationError> errors = [];
 
-    final validationErrors =
-        ValidationEngine.validate(
-      parsed.drafts,
-    );
+    for (int i = 0; i < blocks.length; i++) {
+
+      final result =
+          TransactionParser.parseBlock(blocks[i], i);
+
+      transactions.addAll(result.transactions);
+      errors.addAll(result.errors);
+    }
 
     return ParserResult(
-      drafts: parsed.drafts,
-      errors: [
-        ...parsed.errors,
-        ...validationErrors,
-      ],
+      transactions: transactions,
+      errors: errors,
     );
   }
 }

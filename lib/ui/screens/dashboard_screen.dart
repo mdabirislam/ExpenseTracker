@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'paste_transactions_screen.dart';
+import '../chat/transaction_chat_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -20,7 +20,7 @@ class DashboardScreen extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => const PasteTransactionsScreen(),
+              builder: (_) => const TransactionChatScreen(),
             ),
           );
         },

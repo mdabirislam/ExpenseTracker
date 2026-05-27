@@ -1,224 +1,157 @@
-// transaction_chat_screen.dart
-
 import 'package:flutter/material.dart';
-
-import '../../models/parser_result.dart';
-
 import '../../services/chat_parser/transaction_chat_service.dart';
-
-import 'parser_error_view.dart';
-
-import 'transaction_preview_card.dart';
-
-import 'transaction_confirmation_bar.dart';
-
+import '../../services/chat_parser/chat_response_generator.dart';
+import '../../services/chat_parser/parser_result.dart';
 class TransactionChatScreen extends StatefulWidget {
-
-  const TransactionChatScreen({
-    super.key,
-  });
+  const TransactionChatScreen({super.key});
 
   @override
   State<TransactionChatScreen> createState() =>
       _TransactionChatScreenState();
 }
 
-class _TransactionChatScreenState
-    extends State<TransactionChatScreen> {
+class _TransactionChatScreenState extends State<TransactionChatScreen> {
 
-  final TextEditingController _controller =
-      TextEditingController();
+  final TextEditingController controller = TextEditingController();
+  String response = "";
 
-  ParserResult? result;
+ParserResult? parserResult;
 
-  bool loading = false;
+void send() {
 
-  Future<void> _send() async {
+  final result =
+      TransactionChatService.process(
+    controller.text,
+  );
 
-    final text =
-        _controller.text.trim();
+  final output =
+      ChatResponseGenerator.generate(
+    result,
+  );
 
-    if (text.isEmpty) return;
+  setState(() {
 
-    setState(() {
-      loading = true;
-    });
+    response = output;
 
-    await Future.delayed(
-      const Duration(milliseconds: 150),
-    );
-
-    final parsed =
-        TransactionChatService.process(
-      text,
-    );
-
-    setState(() {
-      result = parsed;
-      loading = false;
-    });
-  }
-
-  @override
-  void dispose() {
-
-    _controller.dispose();
-
-    super.dispose();
-  }
+    parserResult = result;
+  });
+}
 
   @override
   Widget build(BuildContext context) {
 
     return Scaffold(
+      appBar: AppBar(title: const Text("Transaction Chat")),
 
-      appBar: AppBar(
-        title: const Text(
-          'Transaction Chat',
-        ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+
+Expanded(
+  child: SingleChildScrollView(
+
+    child: Column(
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
+
+      children: [
+
+        Text(response),
+
+        const SizedBox(height: 20),
+
+        if (parserResult != null)
+
+          ...parserResult!.transactions.map(
+
+            (tx) => Card(
+
+              margin: const EdgeInsets.only(
+                bottom: 12,
+              ),
+
+              child: Padding(
+                padding:
+                    const EdgeInsets.all(12),
+
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+
+                  children: [
+
+                    Text(
+                      "Source: ${tx.source}",
+                    ),
+
+                    Text(
+                      "Amount: ${tx.amount}",
+                    ),
+
+                    Text(
+                      "Category: ${tx.category}",
+                    ),
+
+                    Text(
+                      "Type: ${tx.type.name}",
+                    ),
+                    if (tx.unknownType != null)
+
+  Padding(
+
+    padding:
+        const EdgeInsets.only(
+      top: 4,
+    ),
+
+    child: Text(
+
+      'Unknown Type: ${tx.unknownType}',
+
+      style: const TextStyle(
+        color: Colors.orange,
+        fontWeight: FontWeight.bold,
       ),
+    ),
+  ),
 
-      body: Column(
+                    Text(
+                      "Date: ${tx.date}",
+                    ),
 
-        children: [
+                    if (tx.note != null)
 
-          // ================= HELP BOX =================
-
-          Container(
-
-            width: double.infinity,
-
-            padding: const EdgeInsets.all(16),
-
-            color: Colors.blue.withOpacity(0.08),
-
-            child: const Text(
-
-'''
-Please add transactions using this syntax:
-
-2-2-26
-
-salary(income) - 20000tk(ESM)
-
-"""
-Monthly salary
-Bonus included
-"""
-
-market - 2500tk(shopping)
-''',
-
-              style: TextStyle(
-                fontSize: 13,
+                      Text(
+                        "Note: ${tx.note}",
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
+      ],
+    ),
+  ),
+),
 
-          // ================= INPUT =================
-
-          Expanded(
-
-            child: Padding(
-
-              padding: const EdgeInsets.all(16),
-
-              child: Column(
-
-                children: [
-
-                  Expanded(
-
-                    child: TextField(
-
-                      controller: _controller,
-
-                      expands: true,
-
-                      maxLines: null,
-
-                      decoration:
-                          const InputDecoration(
-
-                        border:
-                            OutlineInputBorder(),
-
-                        hintText:
-                            'Paste transaction message...',
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  SizedBox(
-
-                    width: double.infinity,
-
-                    child: ElevatedButton(
-
-                      onPressed:
-                          loading
-                              ? null
-                              : _send,
-
-                      child: Text(
-
-                        loading
-                            ? 'Processing...'
-                            : 'Send',
-                      ),
-                    ),
-                  ),
-                ],
+            TextField(
+              controller: controller,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: "Enter transaction message...",
               ),
             ),
-          ),
 
-          // ================= RESULT =================
+            const SizedBox(height: 10),
 
-          if (result != null)
-
-            Expanded(
-
-              child: result!.hasErrors
-
-                  ? ParserErrorView(
-                      errors: result!.errors,
-                    )
-
-                  : Column(
-
-                      children: [
-
-                        Expanded(
-
-                          child: ListView.builder(
-
-                            itemCount:
-                                result!.drafts.length,
-
-                            itemBuilder:
-                                (_, index) {
-
-                              final tx =
-                                  result!
-                                      .drafts[index];
-
-                              return TransactionPreviewCard(
-                                draft: tx,
-                              );
-                            },
-                          ),
-                        ),
-
-                        TransactionConfirmationBar(
-                          drafts: result!.drafts,
-                        ),
-                      ],
-                    ),
+            ElevatedButton(
+              onPressed: send,
+              child: const Text("Send"),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }

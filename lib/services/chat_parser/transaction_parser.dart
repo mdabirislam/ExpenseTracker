@@ -1,175 +1,143 @@
+import '../../models/parsed_transaction.dart';
 import '../../models/transaction_type.dart';
-import '../../models/transaction_draft.dart';
-import '../../models/parser_result.dart';
-import '../../models/validation_error.dart';
+import 'field_validator.dart';
+import 'validation_error.dart';
 
 class TransactionParser {
 
-  static final RegExp dateRegex =
-      RegExp(r'^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$');
+  static ParseResult parseBlock(String block, int index) {
 
-  static final RegExp txRegex =
-      RegExp(
-    r'^(.*?)\s*(?:\((.*?)\))?\s*-\s*(\d+(?:\.\d+)?)\s*(?:tk|৳)?\s*(?:\((.*?)\))?$',
-    caseSensitive: false,
-  );
-
-  static ParserResult parse(List<String> lines) {
-
-    final drafts = <TransactionDraft>[];
-
-    final errors = <ValidationError>[];
+    List<ValidationError> errors = [];
+    List<ParsedTransaction> transactions = [];
 
     DateTime? currentDate;
 
-    bool multilineMode = false;
-
-    String multilineBuffer = '';
-
-    TransactionDraft? lastDraft;
-
-    int txIndex = 0;
+    final lines = block.split('\n');
 
     for (final line in lines) {
 
-      // ================= MULTILINE =================
-
-      if (line == '"""') {
-
-        multilineMode = !multilineMode;
-
-        if (!multilineMode && lastDraft != null) {
-
-          lastDraft.note = multilineBuffer.trim();
-
-          multilineBuffer = '';
-        }
-
-        continue;
-      }
-
-      if (multilineMode) {
-
-        multilineBuffer += '$line\n';
-
-        continue;
-      }
-
-      // ================= DATE =================
-
-      final dateMatch = dateRegex.firstMatch(line);
+      // DATE
+      final dateMatch = RegExp(
+        r'^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})',
+      ).firstMatch(line);
 
       if (dateMatch != null) {
-
         int d = int.parse(dateMatch.group(1)!);
-
         int m = int.parse(dateMatch.group(2)!);
-
         int y = int.parse(dateMatch.group(3)!);
 
-        if (y < 100) {
-          y += 2000;
-        }
+        if (y < 100) y += 2000;
 
-        try {
-          currentDate = DateTime(y, m, d);
-        }
-        catch (_) {
-          errors.add(
-            ValidationError(
-              transactionIndex: txIndex,
-              type: ValidationErrorType.invalidDate,
-              message: 'Invalid date: $line',
-            ),
-          );
-        }
-
+        currentDate = DateTime(y, m, d);
         continue;
       }
 
-      // ================= TRANSACTION =================
+      // TRANSACTION
+      if (line.contains('-')) {
 
-      final txMatch = txRegex.firstMatch(line);
+        final parts = line.split('-');
 
-      if (txMatch == null) {
+String source = parts[0].trim();
 
-        errors.add(
-          ValidationError(
-            transactionIndex: txIndex,
-            type: ValidationErrorType.invalidSyntax,
-            message: 'Invalid transaction syntax: $line',
-          ),
-        );
+TransactionType type =
+    TransactionType.expense;
 
-        continue;
-      }
+String? unknownType;
 
-      txIndex++;
+final typeMatch =
+    RegExp(r'^(.*?)\((.*?)\)$')
+        .firstMatch(source);
 
-      final source = txMatch.group(1)?.trim();
+const validTypes = {
 
-      final rawType = txMatch.group(2)?.trim();
+  'income': TransactionType.income,
 
-      final amountText = txMatch.group(3)?.trim();
+  'expense': TransactionType.expense,
 
-      final category = txMatch.group(4)?.trim();
+  'borrow': TransactionType.debtBorrow,
 
-      TransactionType type = TransactionType.expense;
+  'repay': TransactionType.debtRepay,
 
-      if (rawType != null) {
+  'lend': TransactionType.lendGive,
 
-        switch (rawType.toLowerCase()) {
-          case 'income':
-            type = TransactionType.income;
-            break;
+  'receive': TransactionType.lendReceive,
+};
 
-          case 'expense':
-            type = TransactionType.expense;
-            break;
+if (typeMatch != null) {
 
-          case 'debt':
-          case 'borrow':
-            type = TransactionType.debtBorrow;
-            break;
+  source =
+      typeMatch.group(1)!
+          .trim();
 
-          case 'repay':
-            type = TransactionType.debtRepay;
-            break;
+  final rawType =
+      typeMatch.group(2)!
+          .trim()
+          .toLowerCase();
+
+  if (validTypes.containsKey(rawType)) {
+
+    type =
+        validTypes[rawType]!;
+
+  } else {
+
+    unknownType = rawType;
+
+    type =
+        TransactionType.expense;
+  }
+}
+        final right = parts.sublist(1).join('-');
+
+        final amountMatch =
+            RegExp(r'(\d[\d,]*)').firstMatch(right);
+
+        if (amountMatch == null) {
+          errors.add(ValidationError(
+            index: index,
+            message: "Missing amount in: $line",
+          ));
+          continue;
         }
+
+        final amount =
+            double.parse(amountMatch.group(1)!.replaceAll(',', ''));
+
+        final categoryMatch =
+            RegExp(r'\((.*?)\)').firstMatch(right);
+
+        final category =
+            categoryMatch?.group(1) ?? "Other";
+
+        transactions.add(ParsedTransaction(
+          source: source,
+          amount: amount,
+          category: category,
+          type: type,
+          date: currentDate ?? DateTime.now(),
+          note: null,
+          categoryConfidence: true,
+          typeConfidence: true,
+          typeGuessed: false,
+          categoryGuessed: false,
+          unknownType: unknownType,
+        ));
       }
-
-      final amount = double.tryParse(amountText ?? '');
-
-      final draft = TransactionDraft(
-        index: txIndex,
-        rawLine: line,
-        date: currentDate,
-        source: source,
-        type: type,
-        amount: amount,
-        category: category,
-      );
-
-      drafts.add(draft);
-
-      lastDraft = draft;
     }
 
-    if (multilineMode) {
-
-      errors.add(
-        ValidationError(
-          transactionIndex: txIndex,
-          type: ValidationErrorType.multilineNotClosed,
-          message: 'Multiline note was not closed properly',
-        ),
-      );
-    }
-
-    return ParserResult(
-      drafts: drafts,
+    return ParseResult(
+      transactions: transactions,
       errors: errors,
     );
   }
 }
 
+class ParseResult {
+  final List<ParsedTransaction> transactions;
+  final List<ValidationError> errors;
+
+  ParseResult({
+    required this.transactions,
+    required this.errors,
+  });
+}

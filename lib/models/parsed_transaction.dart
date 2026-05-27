@@ -12,6 +12,8 @@ class ParsedTransaction {
 
   final TransactionType type;
 
+  final String? unknownType;
+
   final DateTime date;
 
   final bool categoryConfidence;
@@ -22,7 +24,6 @@ class ParsedTransaction {
 
   final bool categoryGuessed;
 
-  // ✅ NEW
   final String? unknownCategory;
 
   ParsedTransaction({
@@ -38,6 +39,7 @@ class ParsedTransaction {
     required this.categoryGuessed,
 
     this.unknownCategory,
+    this.unknownType,
   });
 
   ParsedTransaction copyWith({
@@ -51,7 +53,7 @@ class ParsedTransaction {
     bool? typeConfidence,
     bool? typeGuessed,
     bool? categoryGuessed,
-
+    String? unknownType,
     String? unknownCategory,
   }) {
 
@@ -87,6 +89,9 @@ class ParsedTransaction {
       unknownCategory:
           unknownCategory ??
               this.unknownCategory,
+      unknownType:
+          unknownType ??
+              this.unknownType,
     );
   }
 }
