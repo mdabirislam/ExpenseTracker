@@ -6,6 +6,7 @@ import '../../services/chat_parser/chat_response_generator.dart';
 
 import '../../models/parsed_transaction.dart';
 import '../../models/transaction_model.dart';
+import '../../models/transaction_type.dart';
 
 import '../../data/local/app_state.dart';
 import '../../utils/helpers.dart';
@@ -48,6 +49,14 @@ class _TransactionChatScreenState extends State<TransactionChatScreen> {
     });
   }
 
+  // ================= UPDATE TYPE =================
+  void updateType(int index, TransactionType type) {
+    setState(() {
+      transactions[index] =
+          transactions[index].copyWith(type: type);
+    });
+  }
+
   // ================= SAVE ALL =================
   Future<void> saveAll() async {
 
@@ -57,12 +66,12 @@ class _TransactionChatScreenState extends State<TransactionChatScreen> {
       isSaving = true;
     });
 
-    final validTransactions = transactions.where((tx) =>
+    final valid = transactions.where((tx) =>
         tx.source.trim().isNotEmpty &&
         tx.amount > 0
     ).toList();
 
-    for (final tx in validTransactions) {
+    for (final tx in valid) {
 
       await AppState.addTransaction(
         TransactionData(
@@ -106,7 +115,7 @@ class _TransactionChatScreenState extends State<TransactionChatScreen> {
         child: Column(
           children: [
 
-            // ================= OUTPUT AREA =================
+            // ================= OUTPUT =================
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
@@ -117,9 +126,12 @@ class _TransactionChatScreenState extends State<TransactionChatScreen> {
 
                     const SizedBox(height: 16),
 
-                    if (transactions.isNotEmpty)
+                    ...transactions.asMap().entries.map((entry) {
 
-                      ...transactions.map((tx) => Card(
+                      final index = entry.key;
+                      final tx = entry.value;
+
+                      return Card(
                         margin: const EdgeInsets.only(bottom: 12),
                         child: Padding(
                           padding: const EdgeInsets.all(12),
@@ -131,29 +143,112 @@ class _TransactionChatScreenState extends State<TransactionChatScreen> {
                               Text("Amount: ${tx.amount}"),
                               Text("Category: ${tx.category}"),
                               Text("Type: ${tx.type.name}"),
+                              Text("Date: ${tx.date}"),
 
                               // ================= UNKNOWN TYPE =================
-                              if ((tx as dynamic).unknownType != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Text(
-                                    "Unknown Type: ${(tx as dynamic).unknownType}",
-                                    style: const TextStyle(
-                                      color: Colors.orange,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                              if (tx.unknownType != null)
+                                Container(
+                                  margin: const EdgeInsets.only(top: 8),
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+
+                                      Row(
+                                        children: const [
+                                          Icon(Icons.warning,
+                                              color: Colors.orange,
+                                              size: 18),
+                                          SizedBox(width: 6),
+                                          Text(
+                                            "Unknown Type Detected",
+                                            style: TextStyle(
+                                              color: Colors.orange,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+                                      const SizedBox(height: 6),
+
+                                      Text(
+                                        "User input: ${tx.unknownType}",
+                                        style: const TextStyle(
+                                          color: Colors.orange,
+                                        ),
+                                      ),
+
+                                      const SizedBox(height: 8),
+
+                                      Wrap(
+                                        spacing: 8,
+                                        children: [
+
+                                          ActionChip(
+                                            label: const Text("Expense"),
+                                            onPressed: () =>
+                                                updateType(index, TransactionType.expense),
+                                          ),
+
+                                          ActionChip(
+                                            label: const Text("Income"),
+                                            onPressed: () =>
+                                                updateType(index, TransactionType.income),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
                                 ),
 
-                              // ================= NOTE =================
-                              if (tx.note != null)
-                                Text("Note: ${tx.note}"),
+                              const SizedBox(height: 10),
 
-                              Text("Date: ${tx.date}"),
+                              // ================= PREVIEW BUTTON =================
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  child: const Text("Preview"),
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (_) => AlertDialog(
+                                        title: const Text("Preview"),
+                                        content: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+
+                                            Text("Source: ${tx.source}"),
+                                            Text("Amount: ${tx.amount}"),
+                                            Text("Category: ${tx.category}"),
+                                            Text("Type: ${tx.type.name}"),
+                                            Text("Date: ${tx.date}"),
+
+                                            if (tx.note != null)
+                                              Text("Note: ${tx.note}"),
+                                          ],
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context),
+                                            child: const Text("Close"),
+                                          )
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
                             ],
                           ),
                         ),
-                      )),
+                      );
+                    }),
                   ],
                 ),
               ),
@@ -171,6 +266,7 @@ class _TransactionChatScreenState extends State<TransactionChatScreen> {
 
             const SizedBox(height: 10),
 
+            // ================= BUTTONS =================
             Row(
               children: [
 
