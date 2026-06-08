@@ -235,14 +235,15 @@ class HomeScreen extends StatelessWidget {
           onTap: () => _navigate(context, ExpenseDetailScreen()),
           child: InfoBoard(
             title: boardExpenseTitle,
-            value: '৳ ${summary.expense.toStringAsFixed(2)}',
+            // value: '৳ ${summary.expense.toStringAsFixed(2)}',
+            value: '৳ ${(summary.expense+summary.debtRepay).toStringAsFixed(2)}',
           ),
         ),
         InkWell(
           onTap: () => _navigate(context, DebtDetailScreen()),
           child: InfoBoard(
             title: boardDebtTitle,
-            value: '৳ ${summary.debt.toStringAsFixed(2)}',
+            value: '৳ ${AppState.totalDebt.toStringAsFixed(2)}',
           ),
         ),
         InkWell(

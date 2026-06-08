@@ -136,7 +136,8 @@ static MonthlySummary calculateByRange(DateTime startDate, DateTime endDate) {
   double savingsVal = 0;
   double balanceVal = 0;
   double lendVal = 0;
-  double borrowVal = 0; // <-- monthly borrow
+  double borrowVal = 0;
+  double debtRepayVal = 0; // <-- monthly debt repayment
 
   final filtered = _getTransactionsByRange(startDate, endDate);
 
@@ -155,6 +156,8 @@ static MonthlySummary calculateByRange(DateTime startDate, DateTime endDate) {
 
     // ✅ monthly borrow
     if (tx.type == TransactionType.debtBorrow) borrowVal += amount;
+    // ✅ monthly debt repayment
+    if (tx.type == TransactionType.debtRepay) debtRepayVal += amount;
   }
 
   return MonthlySummary(
@@ -165,6 +168,7 @@ static MonthlySummary calculateByRange(DateTime startDate, DateTime endDate) {
     balance: balanceVal,
     lend: lendVal < 0 ? 0 : lendVal,
     borrow: borrowVal < 0 ? 0 : borrowVal, // <-- return borrow
+    debtRepay: debtRepayVal < 0 ? 0 : debtRepayVal, // <-- monthly debt repayment
   );
 }
   // ================== CURRENT MONTH ==================
@@ -180,6 +184,7 @@ static MonthlySummary calculateByRange(DateTime startDate, DateTime endDate) {
         balance: 0,
         lend: 0,
         borrow: 0,
+        debtRepay: 0,
       );
     }
 

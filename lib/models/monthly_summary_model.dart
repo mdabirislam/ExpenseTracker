@@ -5,8 +5,8 @@ class MonthlySummary {
   final double savings;
   final double balance;
   final double lend;
-  final double borrow; // <-- new
-
+  final double borrow; 
+  final double debtRepay; // <-- new
   MonthlySummary({
     required this.income,
     required this.expense,
@@ -14,6 +14,7 @@ class MonthlySummary {
     required this.savings,
     required this.balance,
     required this.lend,
-    required this.borrow, // <-- new
+    required this.borrow, 
+    required this.debtRepay, // <-- new
   });
 }

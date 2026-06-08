@@ -1,4 +1,4 @@
-import '../../models/parser_result.dart';
+// import '../../models/parser_result.dart';
 
 class ResponseGenerator {
 
