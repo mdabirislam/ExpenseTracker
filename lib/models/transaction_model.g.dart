@@ -30,13 +30,15 @@ class TransactionDataAdapter extends TypeAdapter<TransactionData> {
       isArchived: fields[10] as bool,
       isCleared: fields[11] as bool,
       isPlanned: fields[12] as bool,
+      linkedId: fields[13] as String?,
+      paymentStatus: fields[14] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, TransactionData obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(15)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -62,7 +64,11 @@ class TransactionDataAdapter extends TypeAdapter<TransactionData> {
       ..writeByte(11)
       ..write(obj.isCleared)
       ..writeByte(12)
-      ..write(obj.isPlanned);
+      ..write(obj.isPlanned)
+      ..writeByte(13)
+      ..write(obj.linkedId)
+      ..writeByte(14)
+      ..write(obj.paymentStatus);
   }
 
   @override

@@ -7,36 +7,51 @@ class CategoryDropdownField extends StatefulWidget {
   final String? initialValue;
   final Function(String) onSelected;
 
+  // external decoration support
+  final InputDecoration? decoration;
+
   const CategoryDropdownField({
     super.key,
     required this.type,
     this.initialValue,
     required this.onSelected,
+    this.decoration,
   });
 
   @override
-  State<CategoryDropdownField> createState() => _CategoryDropdownFieldState();
+  State<CategoryDropdownField> createState() =>
+      _CategoryDropdownFieldState();
 }
 
-class _CategoryDropdownFieldState extends State<CategoryDropdownField> {
+class _CategoryDropdownFieldState
+    extends State<CategoryDropdownField> {
+
   late TextEditingController _controller;
-  // String? _selectedCategory;
+
   OverlayEntry? _overlayEntry;
+
   final LayerLink _layerLink = LayerLink();
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.initialValue ?? '');
-    // _selectedCategory = widget.initialValue;
+
+    _controller = TextEditingController(
+      text: widget.initialValue ?? '',
+    );
   }
 
   @override
-  void didUpdateWidget(covariant CategoryDropdownField oldWidget) {
+  void didUpdateWidget(
+      covariant CategoryDropdownField oldWidget) {
+
     super.didUpdateWidget(oldWidget);
+
     if (widget.initialValue != oldWidget.initialValue) {
-      _controller.text = widget.initialValue ?? '';
-      // _selectedCategory = widget.initialValue;
+
+      _controller.text =
+          widget.initialValue ?? '';
+
       _removeOverlay();
     }
   }
@@ -45,102 +60,206 @@ class _CategoryDropdownFieldState extends State<CategoryDropdownField> {
   void dispose() {
     _removeOverlay();
     _controller.dispose();
+
     super.dispose();
   }
 
   void _showOverlay() {
+
     _removeOverlay();
 
-    final categories = CategoryManager.getCategories(widget.type);
-    final filtered = _controller.text.isEmpty
-        ? categories
-        : categories
-            .where((c) =>
-                c.toLowerCase().contains(_controller.text.toLowerCase()))
-            .toList();
-    final showAddNew = _controller.text.isNotEmpty &&
-        !categories.any((c) =>
-            c.toLowerCase() == _controller.text.trim().toLowerCase());
+    final categories =
+        CategoryManager.getCategories(
+            widget.type);
+
+    final filtered =
+        _controller.text.isEmpty
+            ? categories
+            : categories.where(
+                (c) =>
+                    c
+                        .toLowerCase()
+                        .contains(
+                          _controller.text
+                              .toLowerCase(),
+                        ),
+              ).toList();
+
+    final showAddNew =
+        _controller.text.isNotEmpty &&
+            !categories.any(
+              (c) =>
+                  c.toLowerCase() ==
+                  _controller.text
+                      .trim()
+                      .toLowerCase(),
+            );
 
     _overlayEntry = OverlayEntry(
-      builder: (context) => GestureDetector(
+      builder: (context) =>
+          GestureDetector(
         onTap: _removeOverlay,
-        behavior: HitTestBehavior.translucent,
+        behavior:
+            HitTestBehavior.translucent,
+
         child: Stack(
           children: [
+
             Positioned(
-              width: MediaQuery.of(context).size.width - 32, // adjust if needed
-              child: CompositedTransformFollower(
+              width:
+                  MediaQuery.of(context)
+                          .size
+                          .width -
+                      32,
+
+              child:
+                  CompositedTransformFollower(
                 link: _layerLink,
-                showWhenUnlinked: false,
-                offset: const Offset(0, 55), // TextField height
+
+                showWhenUnlinked:
+                    false,
+
+                offset: const Offset(
+                    0, 55),
+
                 child: Material(
                   elevation: 4,
-                  borderRadius: BorderRadius.circular(6),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 220),
+
+                  borderRadius:
+                      BorderRadius
+                          .circular(6),
+
+                  child:
+                      ConstrainedBox(
+                    constraints:
+                        const BoxConstraints(
+                      maxHeight: 220,
+                    ),
+
                     child: ListView(
-                      padding: EdgeInsets.zero,
+                      padding:
+                          EdgeInsets.zero,
+
                       shrinkWrap: true,
+
                       children: [
-                        ...filtered.map((cat) => ListTile(
-                              dense: true,
-                              title: Text(cat),
-                              onTap: () {
-                                _controller.text = cat;
-                                // _selectedCategory = cat;
-                                widget.onSelected(cat);
-                                _removeOverlay();
-                                FocusScope.of(context).unfocus();
-                              },
-                            )),
-                        if (showAddNew)
-                          ListTile(
-                            leading: const Icon(Icons.add),
-                            title: Text(
-                                'Add "${_controller.text.trim()}" as new category'),
-                            onTap: () async {
-                              final newCat = _controller.text.trim();
-                              await CategoryManager.addCategory(
-                                  widget.type, newCat);
-                              _controller.text = newCat;
-                              // _selectedCategory = newCat;
-                              widget.onSelected(newCat);
+
+                        ...filtered.map(
+                          (cat) =>
+                              ListTile(
+                            dense: true,
+
+                            title:
+                                Text(cat),
+
+                            onTap: () {
+
+                              _controller
+                                  .text = cat;
+
+                              widget
+                                  .onSelected(
+                                      cat);
+
                               _removeOverlay();
-                              FocusScope.of(context).unfocus();
+
+                              FocusScope.of(
+                                      context)
+                                  .unfocus();
                             },
                           ),
+                        ),
+
+                        if (showAddNew)
+                          ListTile(
+                            leading:
+                                const Icon(
+                              Icons.add,
+                            ),
+
+                            title: Text(
+                              'Add "${_controller.text.trim()}" as new category',
+                            ),
+
+                            onTap:
+                                () async {
+
+                              final newCat =
+                                  _controller
+                                      .text
+                                      .trim();
+
+                              await CategoryManager
+                                  .addCategory(
+                                widget.type,
+                                newCat,
+                              );
+
+                              _controller
+                                  .text =
+                                  newCat;
+
+                              widget
+                                  .onSelected(
+                                      newCat);
+
+                              _removeOverlay();
+
+                              FocusScope.of(
+                                      context)
+                                  .unfocus();
+                            },
+                          ),
+
                       ],
                     ),
                   ),
                 ),
               ),
             ),
+
           ],
         ),
       ),
     );
 
-    Overlay.of(context).insert(_overlayEntry!);
+    Overlay.of(context)
+        .insert(_overlayEntry!);
   }
 
   void _removeOverlay() {
+
     _overlayEntry?.remove();
+
     _overlayEntry = null;
   }
 
   @override
   Widget build(BuildContext context) {
+
     return CompositedTransformTarget(
       link: _layerLink,
+
       child: TextField(
         controller: _controller,
-        decoration: const InputDecoration(
-          labelText: 'Category',
-          border: OutlineInputBorder(),
-        ),
+
+        // FIXED:
+        // use external decoration
+        // otherwise default one
+        decoration:
+            widget.decoration ??
+                const InputDecoration(
+                  labelText:
+                      'Category',
+
+                  border:
+                      OutlineInputBorder(),
+                ),
+
         onTap: _showOverlay,
-        onChanged: (_) => _showOverlay(),
+
+        onChanged: (_) =>
+            _showOverlay(),
       ),
     );
   }

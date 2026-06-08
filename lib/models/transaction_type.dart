@@ -74,6 +74,7 @@ enum TransactionType {
     }
   }
 
+
   /// 🔹 Label
   String get label {
     switch (this) {

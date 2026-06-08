@@ -5,6 +5,7 @@ import './models/transaction_type.dart';
 import 'ui/screens/main_screen.dart';
 import './data/local/app_state.dart';
 import 'models/debt_data_model.dart';
+import './models/month_range_model.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,13 +16,15 @@ void main() async {
   Hive.registerAdapter(TransactionTypeAdapter());
   Hive.registerAdapter(TransactionDataAdapter());
   Hive.registerAdapter(DebtDataAdapter());
+  Hive.registerAdapter(MonthRangeAdapter());
 
-  // Box open
+  // Box open (only here)
   await Hive.openBox<TransactionData>('transactions');
   await Hive.openBox<DebtData>('debts');
+  await Hive.openBox<MonthRange>('monthRanges');
 
   // Load App State
-  await AppState.init();
+  await AppState.init(); // ✅ only this
 
   runApp(const MyApp());
 }

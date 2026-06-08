@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:intl/intl.dart';
 
 import '../../../models/transaction_model.dart';
 import '../../../models/transaction_type.dart';
@@ -24,14 +25,27 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
 
   String? _selectedCategory;
 
+  late DateTime _selectedDate;
+
   @override
   void initState() {
     super.initState();
+
     _selectedType = widget.tx.type;
-    _sourceController = TextEditingController(text: widget.tx.source);
-    _amountController = TextEditingController(text: widget.tx.amount.toString());
-    _noteController = TextEditingController(text: widget.tx.note ?? '');
+
+    _sourceController =
+        TextEditingController(text: widget.tx.source);
+
+    _amountController =
+        TextEditingController(text: widget.tx.amount.toString());
+
+    _noteController =
+        TextEditingController(text: widget.tx.note ?? '');
+
     _selectedCategory = widget.tx.category;
+
+    _selectedDate = widget.tx.date;
+
     CategoryManager.init();
   }
 
@@ -43,22 +57,49 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
     super.dispose();
   }
 
+  String _monthKeyFromDate(DateTime date) {
+    return "${date.year}-${date.month.toString().padLeft(2,'0')}";
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
   Future<void> _onSave() async {
     final sourceInput = _sourceController.text.trim();
     final note = _noteController.text.trim();
     final amountText = _amountController.text.trim();
 
-    if (sourceInput.isEmpty || amountText.isEmpty || _selectedCategory == null) {
+    if (sourceInput.isEmpty ||
+        amountText.isEmpty ||
+        _selectedCategory == null) {
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all required fields')),
+        const SnackBar(
+          content: Text('Please fill all required fields'),
+        ),
       );
       return;
     }
 
     final amount = double.tryParse(amountText);
+
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid amount')),
+        const SnackBar(
+          content: Text('Invalid amount'),
+        ),
       );
       return;
     }
@@ -70,25 +111,35 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
       amount: amount,
       note: note.isEmpty ? null : note,
       category: _selectedCategory!,
-      date: widget.tx.date,
-      monthKey: widget.tx.monthKey,
+      date: _selectedDate,
+      monthKey: _monthKeyFromDate(_selectedDate),
     );
 
-    await Hive.box<TransactionData>('transactions').put(widget.tx.key, updatedTx);
+    await Hive
+        .box<TransactionData>('transactions')
+        .put(widget.tx.key, updatedTx);
 
     if (!mounted) return;
+
     Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Edit Transaction')),
+      appBar: AppBar(
+        title: const Text('Edit Transaction'),
+      ),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
+
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+
           children: [
+
             TransactionTypeSelector(
               selectedType: _selectedType,
               onSelected: (type) {
@@ -98,7 +149,9 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
                 });
               },
             ),
+
             const SizedBox(height: 16),
+
             TextField(
               controller: _sourceController,
               decoration: const InputDecoration(
@@ -106,13 +159,39 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
+
             const SizedBox(height: 16),
+
             CategoryDropdownField(
               type: _selectedType,
               initialValue: _selectedCategory,
-              onSelected: (cat) => _selectedCategory = cat,
+              onSelected: (cat) {
+                _selectedCategory = cat;
+              },
             ),
+
             const SizedBox(height: 16),
+
+            // DATE FIELD (Category আর Amount এর মাঝে)
+            InkWell(
+              onTap: _pickDate,
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Date',
+                  border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.calendar_month),
+                ),
+
+                child: Text(
+                  DateFormat(
+                    'dd MMM yyyy',
+                  ).format(_selectedDate),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
             TextField(
               controller: _amountController,
               keyboardType: TextInputType.number,
@@ -122,7 +201,9 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
+
             const SizedBox(height: 16),
+
             TextField(
               controller: _noteController,
               maxLines: 3,
@@ -131,24 +212,33 @@ class _EditTransactionScreenState extends State<EditTransactionScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
+
             const SizedBox(height: 24),
+
             Row(
               children: [
+
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () =>
+                        Navigator.pop(context),
+
                     child: const Text('Cancel'),
                   ),
                 ),
+
                 const SizedBox(width: 12),
+
                 Expanded(
                   child: ElevatedButton(
                     onPressed: _onSave,
                     child: const Text('Save'),
                   ),
                 ),
+
               ],
             ),
+
           ],
         ),
       ),

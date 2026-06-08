@@ -1,3 +1,6 @@
+//__________for automatic making of ....g.dart_______
+// flutter packages pub run build_runner build --delete-conflicting-outputs
+
 import 'package:hive/hive.dart';
 import 'transaction_type.dart';
 part 'transaction_model.g.dart';
@@ -17,7 +20,8 @@ class TransactionData extends HiveObject {
   @HiveField(10) final bool isArchived;
   @HiveField(11) final bool isCleared;
   @HiveField(12) final bool isPlanned;
-
+  @HiveField(13) final String? linkedId;
+  @HiveField(14) final String? paymentStatus;
 TransactionData({
   required this.id,
   required this.type,
@@ -32,6 +36,8 @@ TransactionData({
   this.isArchived = false,
   this.isCleared = false,
   this.isPlanned = false,
+  this.linkedId,
+  this.paymentStatus,
 })  : date = date ?? DateTime.now(),
       monthKey = monthKey ??
           "${(date ?? DateTime.now()).year}-${(date ?? DateTime.now()).month.toString().padLeft(2, '0')}";

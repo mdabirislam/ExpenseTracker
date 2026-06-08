@@ -67,7 +67,7 @@ class TransactionPreview extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            flex: 4,
+            flex: 3,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -123,10 +123,10 @@ class TransactionPreview extends StatelessWidget {
                     '$sign ৳ ${tx.amount.toStringAsFixed(2)}',
                     style: TextStyle(color: color, fontWeight: FontWeight.w700),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 4),
 
                   PopupMenuButton(
-                    icon: const Icon(Icons.more_vert, size: 18),
+                    icon: const Icon(Icons.more_vert, size: 16),
                     itemBuilder: (context) => [
                       const PopupMenuItem(value: 'edit', child: Text("Edit")),
                       const PopupMenuItem(

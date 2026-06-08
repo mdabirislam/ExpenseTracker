@@ -24,7 +24,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   TransactionType _selectedType = TransactionType.expense;
   String? _selectedCategory;
 
-  DateTime _selectedDate = DateTime.now(); // date select hobe
+  DateTime _selectedDate = DateTime.now();
+
+  // per-field locks
+  bool _categoryLocked = false;
+  bool _dateLocked = false;
 
   @override
   void initState() {
@@ -40,17 +44,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     super.dispose();
   }
 
-  void _resetForm() {
-    _amountController.clear();
-    _sourceController.clear();
-    _noteController.clear();
-
-    setState(() {
-      _selectedCategory = null;
-      _selectedDate = DateTime.now();
-    });
-  }
-
   Future<void> _pickDate() async {
     final date = await showDatePicker(
       context: context,
@@ -62,6 +55,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     if (date != null) {
       setState(() {
         _selectedDate = date;
+
+        // user manually changed -> auto unlock date lock
+        if (_dateLocked) {
+          _dateLocked = false;
+        }
       });
     }
   }
@@ -93,7 +91,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       return;
     }
 
-    // current time
     final now = DateTime.now();
 
     final finalDateTime = DateTime(
@@ -124,24 +121,48 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       const SnackBar(content: Text('Transaction saved')),
     );
 
-    _resetForm();
+    // always clear text fields
+    _amountController.clear();
+    _sourceController.clear();
+    _noteController.clear();
+
+    // lock-aware reset
+    setState(() {
+
+      if (!_categoryLocked) {
+        _selectedCategory = null;
+      }
+
+      if (!_dateLocked) {
+        _selectedDate = DateTime.now();
+      }
+
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Transaction')),
+      appBar: AppBar(
+        title: const Text('Add Transaction'),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+
             TransactionTypeSelector(
               selectedType: _selectedType,
               onSelected: (type) {
                 setState(() {
                   _selectedType = type;
+
+                  // type change => category invalid হতে পারে
                   _selectedCategory = null;
+
+                  // category lock release
+                  _categoryLocked = false;
                 });
               },
             ),
@@ -158,28 +179,83 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
             const SizedBox(height: 16),
 
-            CategoryDropdownField(
-              key: ValueKey(_selectedCategory),
-              type: _selectedType,
-              initialValue: _selectedCategory,
-              onSelected: (cat) {
-                setState(() {
-                  _selectedCategory = cat;
-                });
-              },
-            ),
+CategoryDropdownField(
+  key: ValueKey(_selectedCategory),
+  type: _selectedType,
+  initialValue: _selectedCategory,
 
+  decoration: InputDecoration(
+    labelText: _categoryLocked
+        ? 'Category (Locked)'
+        : 'Category',
+
+    border: const OutlineInputBorder(),
+
+    suffixIcon: IconButton(
+      tooltip: _categoryLocked
+          ? 'Unlock Category'
+          : 'Lock Category',
+
+      icon: Icon(
+        _categoryLocked
+            ? Icons.lock
+            : Icons.lock_open,
+      ),
+
+      onPressed: () {
+        setState(() {
+          _categoryLocked = !_categoryLocked;
+        });
+      },
+    ),
+  ),
+
+  onSelected: (cat) {
+    setState(() {
+      _selectedCategory = cat;
+
+      if (_categoryLocked) {
+        _categoryLocked = false;
+      }
+    });
+  },
+),
             const SizedBox(height: 16),
 
-            // DATE FIELD
+            // DATE FIELD + LOCK ICON INSIDE FIELD
             InkWell(
               onTap: _pickDate,
               child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Date',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.calendar_today),
+                decoration: InputDecoration(
+                  labelText: _dateLocked
+                      ? 'Date (Locked)'
+                      : 'Date',
+
+                  border: const OutlineInputBorder(),
+
+                  prefixIcon: const Icon(
+                    Icons.calendar_today,
+                  ),
+
+                  suffixIcon: IconButton(
+                    tooltip: _dateLocked
+                        ? 'Unlock Date'
+                        : 'Lock Date',
+
+                    icon: Icon(
+                      _dateLocked
+                          ? Icons.lock
+                          : Icons.lock_open,
+                    ),
+
+                    onPressed: () {
+                      setState(() {
+                        _dateLocked = !_dateLocked;
+                      });
+                    },
+                  ),
                 ),
+
                 child: Text(
                   "${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}",
                 ),
@@ -218,6 +294,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 child: const Text('Save'),
               ),
             ),
+
           ],
         ),
       ),
